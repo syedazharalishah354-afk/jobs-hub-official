@@ -1,0 +1,4 @@
+/api/jobs      /jobs.json    200
+/api/config    /config.json  200
+/api/*         /.netlify/functions/api/:splat 200
+/*             /index.html   200
