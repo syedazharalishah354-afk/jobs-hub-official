@@ -122,12 +122,8 @@ export default function App() {
   };
 
   const handleOpenApply = (positionName?: string, qualification?: string) => {
-    if (positionName) {
-      setSelectedJobTitle(positionName);
-    }
-    if (qualification) {
-      setSelectedJobQualification(qualification);
-    }
+    setSelectedJobTitle(positionName);
+    setSelectedJobQualification(qualification || localStorage.getItem('user_qualification') || 'Matric');
     setIsApplyOpen(true);
   };
 

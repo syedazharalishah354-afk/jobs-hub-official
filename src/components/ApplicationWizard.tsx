@@ -30,14 +30,23 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
   const [submittedApp, setSubmittedApp] = useState<Application | null>(null);
 
   // Form Fields for Step 1
-  const [qualification, setQualification] = useState(initialQualification || 'Matric');
+  const [qualification, setQualification] = useState<string>(() => {
+    return initialQualification || localStorage.getItem('user_qualification') || 'Matric';
+  });
+
+  // Ensure jobs list exists
+  const availableJobsList = jobs && jobs.length > 0 ? jobs : [];
 
   // Filter available jobs based on selected qualification
-  const unlockedJobs = jobs.filter(j => isJobUnlocked(qualification, j.minQualification));
+  const unlockedJobs = availableJobsList.filter(j => isJobUnlocked(qualification, j.minQualification));
+  
+  // Options to render in the dropdown (fallback to availableJobsList if unlockedJobs is empty)
+  const displayedJobsOptions = unlockedJobs.length > 0 ? unlockedJobs : availableJobsList;
 
-  const [jobPosition, setJobPosition] = useState<string>(
-    initialPosition || (unlockedJobs.length > 0 ? unlockedJobs[0].title : jobs[0]?.title || 'Data Entry Operator')
-  );
+  const [jobPosition, setJobPosition] = useState<string>(() => {
+    if (initialPosition) return initialPosition;
+    return displayedJobsOptions.length > 0 ? displayedJobsOptions[0].title : 'Data Entry Operator';
+  });
 
   const [fullName, setFullName] = useState(currentUser?.fullName || '');
   const [fatherName, setFatherName] = useState('');
@@ -90,12 +99,15 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
 
   // When qualification changes, check if jobPosition is still unlocked. If not, auto-select first unlocked job
   useEffect(() => {
+    if (!jobs || jobs.length === 0) return;
     const available = jobs.filter(j => isJobUnlocked(qualification, j.minQualification));
     if (available.length > 0) {
       const isCurrentValid = available.some(j => j.title.toLowerCase() === jobPosition.toLowerCase());
       if (!isCurrentValid) {
         setJobPosition(available[0].title);
       }
+    } else if (jobs.length > 0) {
+      setJobPosition(jobs[0].title);
     }
   }, [qualification, jobs]);
 
@@ -411,7 +423,11 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                       </div>
                       <select
                         value={qualification}
-                        onChange={(e) => setQualification(e.target.value)}
+                        onChange={(e) => {
+                          const newQual = e.target.value;
+                          setQualification(newQual);
+                          localStorage.setItem('user_qualification', newQual);
+                        }}
                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
                       >
                         <option value="Primary">Primary (10 Jobs Available)</option>
@@ -436,7 +452,7 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                           <label className="text-xs font-bold text-slate-800 uppercase tracking-wide">2. Select Available Job *</label>
                         </div>
                         <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase tracking-wider">
-                          {unlockedJobs.length} Positions Available
+                          {displayedJobsOptions.length} Positions Available
                         </span>
                       </div>
                       <select
@@ -444,7 +460,7 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                         onChange={(e) => setJobPosition(e.target.value)}
                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
                       >
-                        {unlockedJobs.map(j => (
+                        {displayedJobsOptions.map(j => (
                           <option key={j.id} value={j.title}>
                             {j.title} — Min: {j.qualificationRequired || j.minQualification} ({j.department})
                           </option>

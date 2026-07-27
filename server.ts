@@ -6,7 +6,7 @@ import multer from 'multer';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { createServer as createViteServer } from 'vite';
-import { getDB, saveDB } from './src/server/db.js';
+import { getDB, saveDB, DEFAULT_JOBS } from './src/server/db.js';
 import { Application, ApplicationStatus, JobPosition } from './src/types.js';
 import { isJobUnlocked } from './src/utils/qualification.js';
 
@@ -264,6 +264,10 @@ app.get('/api/config', (_req: Request, res: Response) => {
 // Available Job Vacancies
 app.get('/api/jobs', (_req: Request, res: Response) => {
   const db = getDB();
+  if (!db.jobs || !Array.isArray(db.jobs) || db.jobs.length < 25) {
+    db.jobs = DEFAULT_JOBS;
+    saveDB(db);
+  }
   res.json(db.jobs);
 });
 

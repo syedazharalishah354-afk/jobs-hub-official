@@ -14,7 +14,7 @@ export interface DBData {
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DATA_DIR, 'db.json');
 
-const DEFAULT_JOBS: JobPosition[] = [
+export const DEFAULT_JOBS: JobPosition[] = [
   // --- CATEGORY 1: Primary / Middle (10 Jobs) ---
   {
     id: 'job-1',
@@ -483,7 +483,7 @@ export function initDB(): DBData {
       parsed.settings.interviewPolicy = DEFAULT_INTERVIEW_POLICY;
       fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
     }
-    if (!parsed.jobs || parsed.jobs.length < 25 || !parsed.jobs[0].minQualification) {
+    if (!parsed.jobs || !Array.isArray(parsed.jobs) || parsed.jobs.length < 25 || parsed.jobs.some(j => !j || !j.id || !j.title || !j.minQualification)) {
       parsed.jobs = DEFAULT_JOBS;
       fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
     }
