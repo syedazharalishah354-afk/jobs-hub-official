@@ -8,6 +8,7 @@ import { TrackModal } from './components/TrackModal.js';
 import { AdminPanel } from './components/AdminPanel.js';
 import { AdminLogin } from './components/AdminLogin.js';
 import { OfficialSlipModal } from './components/OfficialSlipModal.js';
+import { InterviewPolicySection } from './components/InterviewPolicySection.js';
 import { Footer } from './components/Footer.js';
 import { SystemSettings, JobPosition, Application } from './types.js';
 import { fetchConfig, fetchJobs } from './services/api.js';
@@ -194,6 +195,9 @@ export default function App() {
           jobs={jobs}
           onApplyPosition={(pos, qual) => handleOpenApply(pos, qual)}
         />
+
+        {/* Official Interview & Test Policy Section */}
+        <InterviewPolicySection policyText={config.interviewPolicy} />
 
         {/* FAQ Accordion Section */}
         <section className="py-14 bg-blue-50/30 border-b border-blue-100">

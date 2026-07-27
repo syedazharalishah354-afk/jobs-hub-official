@@ -646,7 +646,7 @@ app.get('/api/admin/settings', authMiddleware, (_req: Request, res: Response) =>
 });
 
 app.put('/api/admin/settings', authMiddleware, (req: Request, res: Response) => {
-  const { applicationFee, jazzcash, easypaisa } = req.body;
+  const { applicationFee, jazzcash, easypaisa, interviewPolicy } = req.body;
 
   const db = getDB();
   if (typeof applicationFee === 'number' && applicationFee > 0) {
@@ -665,6 +665,9 @@ app.put('/api/admin/settings', authMiddleware, (req: Request, res: Response) => 
       accountNumber: easypaisa.accountNumber || db.settings.easypaisa.accountNumber,
       instructions: easypaisa.instructions || db.settings.easypaisa.instructions
     };
+  }
+  if (typeof interviewPolicy === 'string') {
+    db.settings.interviewPolicy = interviewPolicy;
   }
 
   saveDB(db);

@@ -509,6 +509,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                     </button>
                   </div>
 
+                  {/* Interview Policy Overview Card on Admin Dashboard */}
+                  {settingsForm && settingsForm.interviewPolicy && (
+                    <div className="bg-white p-5 rounded-2xl border border-blue-100 shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-900 text-sm">Active Interview &amp; Test Policy on Portal</h4>
+                            <span className="text-[11px] text-slate-500">Official candidate rules displayed across the portal</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setActiveTab('settings')}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-bold cursor-pointer"
+                        >
+                          Edit Policy →
+                        </button>
+                      </div>
+                      <div className="bg-slate-50 p-4 rounded-xl text-xs text-slate-700 font-sans leading-relaxed whitespace-pre-line border border-slate-200">
+                        {settingsForm.interviewPolicy}
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               )}
 
@@ -858,13 +884,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                     </div>
                   </div>
 
+                  {/* Interview & Screening Test Policy Settings */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        Interview &amp; Screening Test Policy
+                      </h4>
+                      <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full">
+                        Displayed on Dashboard
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-normal">
+                      Configure the official rules, required documents, reporting instructions, and venue guidelines displayed to candidates on the dashboard and printable pass slips.
+                    </p>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Policy Terms &amp; Instructions</label>
+                      <textarea
+                        rows={6}
+                        value={settingsForm.interviewPolicy || ''}
+                        onChange={(e) => setSettingsForm({
+                          ...settingsForm,
+                          interviewPolicy: e.target.value
+                        })}
+                        placeholder="Enter official interview policy..."
+                        className="w-full text-xs p-3 rounded-lg border border-slate-300 bg-white leading-relaxed font-mono"
+                      />
+                    </div>
+                  </div>
+
                   <button
                     type="submit"
                     disabled={savingSettings}
                     className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
                   >
                     {savingSettings && <RefreshCw className="w-4 h-4 animate-spin" />}
-                    <span>Save Payment Configuration</span>
+                    <span>Save System Configuration &amp; Policy</span>
                   </button>
 
                 </form>

@@ -133,6 +133,18 @@ export const OfficialSlipModal: React.FC<OfficialSlipModalProps> = ({ app, onClo
             </div>
           </div>
 
+          {/* Official Interview & Test Policy Note */}
+          <div className="bg-amber-50/80 p-4 rounded-xl border border-amber-200 text-xs text-amber-950 space-y-1">
+            <strong className="font-bold text-amber-900 block text-[11px] uppercase tracking-wider">
+              Mandatory Interview &amp; Test Regulations
+            </strong>
+            <ul className="list-disc list-inside text-[10px] space-y-1 text-slate-700 font-medium">
+              <li>Must bring original CNIC, educational certificates, and this printed slip on interview day.</li>
+              <li>Report at venue 30 minutes before time. Mobile phones and electronics are strictly banned.</li>
+              <li>No TA/DA will be admissible. Schedule updates will be sent via SMS/Email.</li>
+            </ul>
+          </div>
+
           {/* Footer Note */}
           <div className="pt-4 border-t border-slate-200 text-center text-[10px] text-slate-400">
             This is a computer generated official application slip issued by JobsHubOfficial Services Portal.

@@ -422,6 +422,13 @@ const DEFAULT_JOBS: JobPosition[] = [
   }
 ];
 
+const DEFAULT_INTERVIEW_POLICY = `1. Original Documents Mandatory: Candidates must bring their Original CNIC, Educational Certificates, and Printed Application Pass Slip on the interview day.
+2. Schedule Notification: Official interview dates, venue details, and reporting times will be communicated via SMS and Email after application fee & document verification.
+3. Reporting Time: Candidates must report at the test/interview venue at least 30 minutes before the scheduled time. Late arrivals (beyond 15 minutes) will not be permitted entry.
+4. Electronic Devices Prohibited: Mobile phones, smartwatches, calculators, and electronic storage devices are strictly banned inside the examination/interview premises.
+5. TA / DA Notice: No Traveling Allowance or Daily Allowance (TA/DA) will be paid to candidates for attending the test or interview.
+6. Verification & Disqualification: Any misrepresentation, forged documents, or impersonation will lead to instant disqualification and legal prosecution under applicable laws.`;
+
 const DEFAULT_SETTINGS: SystemSettings = {
   applicationFee: 300,
   jazzcash: {
@@ -433,7 +440,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
     accountTitle: 'JobsHub Official Portal',
     accountNumber: '0345-8899772',
     instructions: 'Open Easypaisa App or dial *786#. Select Send Money -> EasyPaisa Transfer. Enter Account Number 0345-8899772. Enter Amount 300 PKR. Complete payment and take a screenshot.'
-  }
+  },
+  interviewPolicy: DEFAULT_INTERVIEW_POLICY
 };
 
 function ensureDir(dir: string) {
@@ -471,6 +479,10 @@ export function initDB(): DBData {
     // ensure missing keys or incomplete default jobs upgrade
     if (!parsed.users) parsed.users = [];
     if (!parsed.settings) parsed.settings = DEFAULT_SETTINGS;
+    if (!parsed.settings.interviewPolicy) {
+      parsed.settings.interviewPolicy = DEFAULT_INTERVIEW_POLICY;
+      fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
+    }
     if (!parsed.jobs || parsed.jobs.length < 25 || !parsed.jobs[0].minQualification) {
       parsed.jobs = DEFAULT_JOBS;
       fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');

@@ -61,6 +61,11 @@ export const Footer: React.FC<FooterProps> = ({
                 </button>
               </li>
               <li>
+                <button onClick={() => onNavigateSection('interview-policy')} className="hover:text-white transition-colors cursor-pointer">
+                  Interview &amp; Test Policy
+                </button>
+              </li>
+              <li>
                 <button onClick={onOpenTrack} className="hover:text-white transition-colors cursor-pointer">
                   Track Application Status
                 </button>

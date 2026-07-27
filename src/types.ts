@@ -51,6 +51,7 @@ export interface SystemSettings {
   applicationFee: number;
   jazzcash: PaymentMethodConfig;
   easypaisa: PaymentMethodConfig;
+  interviewPolicy?: string;
 }
 
 export interface JobPosition {
