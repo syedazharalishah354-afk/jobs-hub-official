@@ -1,5 +1,6 @@
 import { Application, SystemSettings, JobPosition, ApplicationStats } from '../types.js';
 import { DEFAULT_JOBS, DEFAULT_SETTINGS } from '../constants/defaultData.js';
+import { JOB_CAMPAIGNS } from '../constants/campaigns.js';
 
 function getLocalApplications(): Application[] {
   try {
@@ -52,16 +53,24 @@ export async function fetchConfig(): Promise<SystemSettings> {
 }
 
 export async function fetchJobs(campaignSlug?: string): Promise<JobPosition[]> {
-  const url = campaignSlug && campaignSlug !== 'all' ? `/api/jobs?campaign=${encodeURIComponent(campaignSlug)}` : '/api/jobs';
+  const isKnownCampaign = campaignSlug && campaignSlug !== 'all' && JOB_CAMPAIGNS.some(c => c.slug === campaignSlug);
+  const targetSlug = isKnownCampaign ? campaignSlug : 'all';
+  const url = targetSlug !== 'all' ? `/api/jobs?campaign=${encodeURIComponent(targetSlug)}` : '/api/jobs';
+
+  const filterByCampaign = (jobList: JobPosition[]) => {
+    if (targetSlug === 'all') return jobList;
+    return jobList.filter((j: JobPosition) =>
+      (Array.isArray(j.campaigns) && j.campaigns.includes(targetSlug)) ||
+      (j as any).campaign === targetSlug
+    );
+  };
+
   try {
     const res = await fetch(url);
     if (res.ok) {
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          return data;
-        }
+      const data = await res.json().catch(() => null);
+      if (Array.isArray(data) && data.length > 0) {
+        return filterByCampaign(data);
       }
     }
   } catch (err) {
@@ -71,28 +80,16 @@ export async function fetchJobs(campaignSlug?: string): Promise<JobPosition[]> {
   try {
     const resStatic = await fetch('/jobs.json');
     if (resStatic.ok) {
-      const dataStatic = await resStatic.json();
+      const dataStatic = await resStatic.json().catch(() => null);
       if (Array.isArray(dataStatic) && dataStatic.length > 0) {
-        if (campaignSlug && campaignSlug !== 'all') {
-          return dataStatic.filter((j: JobPosition) =>
-            (j.campaigns && j.campaigns.includes(campaignSlug)) ||
-            (j as any).campaign === campaignSlug
-          );
-        }
-        return dataStatic;
+        return filterByCampaign(dataStatic);
       }
     }
   } catch (err) {
     console.warn('Fallback /jobs.json failed', err);
   }
 
-  if (campaignSlug && campaignSlug !== 'all') {
-    return DEFAULT_JOBS.filter(j =>
-      (j.campaigns && j.campaigns.includes(campaignSlug)) ||
-      (j as any).campaign === campaignSlug
-    );
-  }
-  return DEFAULT_JOBS;
+  return filterByCampaign(DEFAULT_JOBS);
 }
 
 export async function uploadImageFile(file: File): Promise<string> {

@@ -52,6 +52,11 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
     localStorage.setItem('user_qualification', selectedQualification);
   }, [selectedQualification]);
 
+  // Reset category filter when job list updates (e.g. campaign changed)
+  useEffect(() => {
+    setSelectedCategory('all');
+  }, [jobs]);
+
   const unlockInfo = getQualificationUnlockMessage(selectedQualification);
 
   // Filter jobs by search, category, and status

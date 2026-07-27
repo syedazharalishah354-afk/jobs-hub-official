@@ -51,14 +51,19 @@ export default function App() {
 
   useEffect(() => {
     const detectCampaignRoute = () => {
-      const path = window.location.pathname.toLowerCase();
-      if (path.startsWith('/jobs/')) {
-        const slug = path.replace('/jobs/', '').split('/')[0];
-        if (slug) {
-          setActiveCampaignSlug(slug);
-          return slug;
-        }
+      const pathSegments = window.location.pathname.split('/').filter(Boolean);
+      const hashSegments = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+
+      const campaign = JOB_CAMPAIGNS.find(c =>
+        pathSegments.some(seg => seg.toLowerCase() === c.slug) ||
+        hashSegments.some(seg => seg.toLowerCase() === c.slug)
+      );
+
+      if (campaign) {
+        setActiveCampaignSlug(campaign.slug);
+        return campaign.slug;
       }
+
       setActiveCampaignSlug('all');
       return 'all';
     };
@@ -69,10 +74,15 @@ export default function App() {
 
     // Check if URL path or hash indicates admin access
     const checkAdminRoute = () => {
-      const path = window.location.pathname.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
+      const pathSegments = window.location.pathname.split('/').filter(Boolean);
+      const hashSegments = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
       const search = window.location.search.toLowerCase();
-      if (path.includes('/admin') || hash.includes('admin') || search.includes('admin')) {
+
+      const isAdmin = pathSegments.some(s => s.toLowerCase() === 'admin') ||
+                      hashSegments.some(s => s.toLowerCase() === 'admin') ||
+                      search.indexOf('admin') !== -1;
+
+      if (isAdmin) {
         if (localStorage.getItem('admin_token')) {
           setIsAdminOpen(true);
         } else {
@@ -351,7 +361,8 @@ export default function App() {
         isOpen={isAdminOpen}
         onClose={() => {
           setIsAdminOpen(false);
-          if (window.location.pathname.toLowerCase().includes('/admin')) {
+          const pathSegments = window.location.pathname.split('/').filter(Boolean);
+          if (pathSegments.some(s => s.toLowerCase() === 'admin')) {
             window.history.pushState({}, '', '/');
           }
         }}
