@@ -51,9 +51,10 @@ export async function fetchConfig(): Promise<SystemSettings> {
   return DEFAULT_SETTINGS;
 }
 
-export async function fetchJobs(): Promise<JobPosition[]> {
+export async function fetchJobs(campaignSlug?: string): Promise<JobPosition[]> {
+  const url = campaignSlug && campaignSlug !== 'all' ? `/api/jobs?campaign=${encodeURIComponent(campaignSlug)}` : '/api/jobs';
   try {
-    const res = await fetch('/api/jobs');
+    const res = await fetch(url);
     if (res.ok) {
       const contentType = res.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
@@ -72,6 +73,12 @@ export async function fetchJobs(): Promise<JobPosition[]> {
     if (resStatic.ok) {
       const dataStatic = await resStatic.json();
       if (Array.isArray(dataStatic) && dataStatic.length > 0) {
+        if (campaignSlug && campaignSlug !== 'all') {
+          return dataStatic.filter((j: JobPosition) =>
+            (j.campaigns && j.campaigns.includes(campaignSlug)) ||
+            (j as any).campaign === campaignSlug
+          );
+        }
         return dataStatic;
       }
     }
@@ -79,6 +86,12 @@ export async function fetchJobs(): Promise<JobPosition[]> {
     console.warn('Fallback /jobs.json failed', err);
   }
 
+  if (campaignSlug && campaignSlug !== 'all') {
+    return DEFAULT_JOBS.filter(j =>
+      (j.campaigns && j.campaigns.includes(campaignSlug)) ||
+      (j as any).campaign === campaignSlug
+    );
+  }
   return DEFAULT_JOBS;
 }
 

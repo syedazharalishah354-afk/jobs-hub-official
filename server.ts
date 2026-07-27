@@ -262,11 +262,19 @@ app.get('/api/config', (_req: Request, res: Response) => {
 });
 
 // Available Job Vacancies
-app.get('/api/jobs', (_req: Request, res: Response) => {
+app.get('/api/jobs', (req: Request, res: Response) => {
   const db = getDB();
-  if (!db.jobs || !Array.isArray(db.jobs) || db.jobs.length < 25) {
+  if (!db.jobs || !Array.isArray(db.jobs) || db.jobs.length < 50) {
     db.jobs = DEFAULT_JOBS;
     saveDB(db);
+  }
+  const campaign = req.query.campaign as string;
+  if (campaign && campaign !== 'all') {
+    const filtered = db.jobs.filter(j => 
+      (j.campaigns && j.campaigns.includes(campaign)) ||
+      (j as any).campaign === campaign
+    );
+    return res.json(filtered);
   }
   res.json(db.jobs);
 });

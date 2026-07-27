@@ -25,6 +25,18 @@ export const handler = async (event: NetlifyEvent) => {
 
   // GET /api/jobs
   if (path.includes('/api/jobs') && method === 'GET') {
+    const campaign = event.queryStringParameters?.campaign;
+    if (campaign && campaign !== 'all') {
+      const filtered = DEFAULT_JOBS.filter(j => 
+        (j.campaigns && j.campaigns.includes(campaign)) ||
+        (j as any).campaign === campaign
+      );
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(filtered)
+      };
+    }
     return {
       statusCode: 200,
       headers,

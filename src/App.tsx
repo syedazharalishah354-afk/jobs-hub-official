@@ -12,7 +12,8 @@ import { InterviewPolicySection } from './components/InterviewPolicySection.js';
 import { Footer } from './components/Footer.js';
 import { SystemSettings, JobPosition, Application } from './types.js';
 import { fetchConfig, fetchJobs } from './services/api.js';
-import { HelpCircle, ChevronDown } from 'lucide-react';
+import { JOB_CAMPAIGNS, getCampaignBySlug } from './constants/campaigns.js';
+import { HelpCircle, ChevronDown, Sparkles, Filter, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function App() {
   const [config, setConfig] = useState<SystemSettings>({
@@ -31,6 +32,7 @@ export default function App() {
 
   const [jobs, setJobs] = useState<JobPosition[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCampaignSlug, setActiveCampaignSlug] = useState<string>('all');
 
   // Admin session state
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(!!localStorage.getItem('admin_token'));
@@ -48,7 +50,21 @@ export default function App() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   useEffect(() => {
-    loadInitialData();
+    const detectCampaignRoute = () => {
+      const path = window.location.pathname.toLowerCase();
+      if (path.startsWith('/jobs/')) {
+        const slug = path.replace('/jobs/', '').split('/')[0];
+        if (slug) {
+          setActiveCampaignSlug(slug);
+          return slug;
+        }
+      }
+      setActiveCampaignSlug('all');
+      return 'all';
+    };
+
+    const initialSlug = detectCampaignRoute();
+    loadInitialData(initialSlug);
     checkAdminSession();
 
     // Check if URL path or hash indicates admin access
@@ -66,12 +82,19 @@ export default function App() {
     };
 
     checkAdminRoute();
-    window.addEventListener('popstate', checkAdminRoute);
-    window.addEventListener('hashchange', checkAdminRoute);
+
+    const handleLocationChange = () => {
+      const slug = detectCampaignRoute();
+      loadInitialData(slug);
+      checkAdminRoute();
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
 
     return () => {
-      window.removeEventListener('popstate', checkAdminRoute);
-      window.removeEventListener('hashchange', checkAdminRoute);
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
     };
   }, []);
 
@@ -96,10 +119,13 @@ export default function App() {
     }
   };
 
-  const loadInitialData = async () => {
+  const loadInitialData = async (campaignSlug = activeCampaignSlug) => {
     setLoading(true);
     try {
-      const [confData, jobsData] = await Promise.all([fetchConfig(), fetchJobs()]);
+      const [confData, jobsData] = await Promise.all([
+        fetchConfig(),
+        fetchJobs(campaignSlug)
+      ]);
       setConfig(confData);
       setJobs(jobsData);
     } catch (err) {
@@ -107,6 +133,17 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSelectCampaign = (slug: string) => {
+    setActiveCampaignSlug(slug);
+    if (slug === 'all') {
+      window.history.pushState({}, '', '/');
+    } else {
+      window.history.pushState({}, '', `/jobs/${slug}`);
+    }
+    loadInitialData(slug);
+    handleNavigateSection('vacancies');
   };
 
   const handleAdminLoginSuccess = (token: string) => {
@@ -169,10 +206,50 @@ export default function App() {
         isAdminLoggedIn={isAdminLoggedIn}
         onOpenAdminPanel={() => setIsAdminOpen(true)}
         onLogoutAdmin={handleAdminLogout}
+        onSelectCampaign={handleSelectCampaign}
+        activeCampaignSlug={activeCampaignSlug}
       />
 
       {/* Main View Mode */}
       <main className="flex-1">
+        {/* Active Campaign Banner if filtering by campaign */}
+        {activeCampaignSlug && activeCampaignSlug !== 'all' && (
+          <div className="bg-gradient-to-r from-blue-900 via-slate-900 to-blue-950 text-white py-5 px-4 sm:px-6 shadow-md border-b border-blue-800">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl bg-blue-800/80 p-2 rounded-2xl border border-blue-700/50">
+                  {getCampaignBySlug(activeCampaignSlug)?.icon || '💼'}
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-500/30 text-blue-300 text-[10px] font-extrabold uppercase tracking-wider border border-blue-400/30">
+                      Ad Campaign Filter
+                    </span>
+                    <span className="text-xs text-blue-200 font-semibold">
+                      Official Job Listings
+                    </span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-0.5">
+                    {getCampaignBySlug(activeCampaignSlug)?.name || 'Job Campaign'}
+                  </h2>
+                  <p className="text-xs text-slate-300 mt-0.5 max-w-2xl">
+                    {getCampaignBySlug(activeCampaignSlug)?.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0 w-full md:w-auto">
+                <button
+                  onClick={() => handleSelectCampaign('all')}
+                  className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-all cursor-pointer flex-1 md:flex-initial text-center"
+                >
+                  Clear Filter (Show All 25 Jobs)
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
         <Hero
           onOpenApply={() => handleOpenApply()}

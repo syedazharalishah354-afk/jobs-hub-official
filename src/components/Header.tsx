@@ -9,6 +9,8 @@ interface HeaderProps {
   isAdminLoggedIn?: boolean;
   onOpenAdminPanel?: () => void;
   onLogoutAdmin?: () => void;
+  onSelectCampaign?: (slug: string) => void;
+  activeCampaignSlug?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,7 +20,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAdminLogin,
   isAdminLoggedIn,
   onOpenAdminPanel,
-  onLogoutAdmin
+  onLogoutAdmin,
+  onSelectCampaign,
+  activeCampaignSlug
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
@@ -69,30 +73,63 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
+        <nav className="hidden md:flex items-center gap-5 text-xs lg:text-sm font-semibold text-slate-600">
           <button
-            onClick={() => onNavigateSection('hero')}
-            className="hover:text-blue-600 transition-colors cursor-pointer"
+            onClick={() => {
+              if (onSelectCampaign) onSelectCampaign('all');
+              onNavigateSection('hero');
+            }}
+            className={`hover:text-blue-600 transition-colors cursor-pointer ${
+              !activeCampaignSlug || activeCampaignSlug === 'all' ? 'text-blue-600 font-bold' : ''
+            }`}
           >
-            Home
+            All Jobs
           </button>
+
+          {/* Quick Campaign Navs */}
           <button
-            onClick={() => onNavigateSection('vacancies')}
-            className="hover:text-blue-600 transition-colors cursor-pointer"
+            onClick={() => onSelectCampaign && onSelectCampaign('freelancers')}
+            className={`hover:text-blue-600 transition-colors cursor-pointer ${
+              activeCampaignSlug === 'freelancers' ? 'text-blue-600 font-bold border-b-2 border-blue-600 pb-0.5' : ''
+            }`}
           >
-            Active Vacancies
+            Freelancers
           </button>
+
           <button
-            onClick={() => onNavigateSection('steps')}
-            className="hover:text-blue-600 transition-colors cursor-pointer"
+            onClick={() => onSelectCampaign && onSelectCampaign('suthra-punjab')}
+            className={`hover:text-blue-600 transition-colors cursor-pointer ${
+              activeCampaignSlug === 'suthra-punjab' ? 'text-blue-600 font-bold border-b-2 border-blue-600 pb-0.5' : ''
+            }`}
           >
-            Guidelines
+            Suthra Punjab
           </button>
+
           <button
-            onClick={() => onNavigateSection('support')}
-            className="hover:text-blue-600 transition-colors cursor-pointer"
+            onClick={() => onSelectCampaign && onSelectCampaign('factory-workers')}
+            className={`hover:text-blue-600 transition-colors cursor-pointer ${
+              activeCampaignSlug === 'factory-workers' ? 'text-blue-600 font-bold border-b-2 border-blue-600 pb-0.5' : ''
+            }`}
           >
-            Support
+            Factory Workers
+          </button>
+
+          <button
+            onClick={() => onSelectCampaign && onSelectCampaign('government')}
+            className={`hover:text-blue-600 transition-colors cursor-pointer ${
+              activeCampaignSlug === 'government' ? 'text-blue-600 font-bold border-b-2 border-blue-600 pb-0.5' : ''
+            }`}
+          >
+            Government
+          </button>
+
+          <button
+            onClick={() => onSelectCampaign && onSelectCampaign('private')}
+            className={`hover:text-blue-600 transition-colors cursor-pointer ${
+              activeCampaignSlug === 'private' ? 'text-blue-600 font-bold border-b-2 border-blue-600 pb-0.5' : ''
+            }`}
+          >
+            Private
           </button>
         </nav>
 
@@ -175,6 +212,54 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-5 space-y-3 shadow-lg">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Select Job Campaign</div>
+          <div className="grid grid-cols-2 gap-2 pb-2 border-b border-slate-100">
+            <button
+              onClick={() => {
+                if (onSelectCampaign) onSelectCampaign('freelancers');
+                setMobileMenuOpen(false);
+              }}
+              className="py-2 px-3 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-800 text-xs font-semibold text-left border border-slate-200"
+            >
+              💼 Freelancers
+            </button>
+            <button
+              onClick={() => {
+                if (onSelectCampaign) onSelectCampaign('suthra-punjab');
+                setMobileMenuOpen(false);
+              }}
+              className="py-2 px-3 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-800 text-xs font-semibold text-left border border-slate-200"
+            >
+              🧹 Suthra Punjab
+            </button>
+            <button
+              onClick={() => {
+                if (onSelectCampaign) onSelectCampaign('factory-workers');
+                setMobileMenuOpen(false);
+              }}
+              className="py-2 px-3 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-800 text-xs font-semibold text-left border border-slate-200"
+            >
+              🏭 Factory Workers
+            </button>
+            <button
+              onClick={() => {
+                if (onSelectCampaign) onSelectCampaign('government');
+                setMobileMenuOpen(false);
+              }}
+              className="py-2 px-3 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-800 text-xs font-semibold text-left border border-slate-200"
+            >
+              🏛️ Government
+            </button>
+            <button
+              onClick={() => {
+                if (onSelectCampaign) onSelectCampaign('private');
+                setMobileMenuOpen(false);
+              }}
+              className="col-span-2 py-2 px-3 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-800 text-xs font-semibold text-left border border-slate-200"
+            >
+              🏢 Private Jobs
+            </button>
+          </div>
           <button
             onClick={() => {
               onNavigateSection('hero');

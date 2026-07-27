@@ -56,7 +56,7 @@ export function initDB(): DBData {
       parsed.settings.interviewPolicy = DEFAULT_INTERVIEW_POLICY;
       fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
     }
-    if (!parsed.jobs || !Array.isArray(parsed.jobs) || parsed.jobs.length < 25 || parsed.jobs.some(j => !j || !j.id || !j.title || !j.minQualification)) {
+    if (!parsed.jobs || !Array.isArray(parsed.jobs) || parsed.jobs.length < 180 || parsed.jobs.some(j => !j || !j.id || !j.title || !j.minQualification)) {
       parsed.jobs = DEFAULT_JOBS;
       fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
     }

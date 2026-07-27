@@ -58,8 +58,12 @@ export interface JobPosition {
   id: string;
   title: string;
   department: string;
+  organization?: string;
+  category?: string;
   minQualification: string;
   qualificationRequired: string;
+  medicalQualification?: string;
+  experienceRequired?: string;
   jobType?: string;
   ageLimit: string;
   vacancies: number;
@@ -69,6 +73,7 @@ export interface JobPosition {
   description: string;
   requiredSkills?: string[];
   status?: 'active' | 'closed' | 'published' | 'draft';
+  campaigns?: string[];
 }
 
 export interface ApplicationStats {

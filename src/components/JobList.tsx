@@ -39,7 +39,13 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'unlocked' | 'locked'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [detailModalJob, setDetailModalJob] = useState<JobPosition | null>(null);
+
+  // Extract all unique categories present in the current job list
+  const availableCategories = Array.from(
+    new Set(jobs.map(j => j.category).filter((c): c is string => Boolean(c)))
+  ).sort();
 
   // Sync selection to localStorage
   useEffect(() => {
@@ -48,7 +54,7 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
 
   const unlockInfo = getQualificationUnlockMessage(selectedQualification);
 
-  // Filter jobs by search and status
+  // Filter jobs by search, category, and status
   const processedJobs = jobs.map(job => ({
     ...job,
     unlocked: isJobUnlocked(selectedQualification, job.minQualification)
@@ -58,10 +64,15 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
     const matchesSearch =
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (job.category && job.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
       job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (job.requiredSkills && job.requiredSkills.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())));
 
     if (!matchesSearch) return false;
+
+    if (selectedCategory !== 'all' && job.category !== selectedCategory) {
+      return false;
+    }
 
     if (filterType === 'unlocked') return job.unlocked;
     if (filterType === 'locked') return !job.unlocked;
@@ -185,53 +196,87 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
         </div>
 
         {/* ================= FILTER AND SEARCH BAR ================= */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row gap-3 items-center justify-between">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              placeholder="Search by title, skills, or keywords..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-600"
-            />
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                placeholder="Search by title, department, skills..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-600"
+              />
+            </div>
+
+            {/* Status Filter Pills */}
+            <div className="flex items-center gap-2 text-xs font-semibold overflow-x-auto w-full sm:w-auto">
+              <button
+                onClick={() => setFilterType('all')}
+                className={`px-3.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                  filterType === 'all'
+                    ? 'bg-slate-900 text-white border-slate-900 font-bold'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                All Jobs ({jobs.length})
+              </button>
+
+              <button
+                onClick={() => setFilterType('unlocked')}
+                className={`px-3.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                  filterType === 'unlocked'
+                    ? 'bg-emerald-600 text-white border-emerald-600 font-bold'
+                    : 'bg-white text-emerald-800 border-slate-200 hover:bg-emerald-50'
+                }`}
+              >
+                Unlocked Only ({unlockedCount})
+              </button>
+
+              <button
+                onClick={() => setFilterType('locked')}
+                className={`px-3.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                  filterType === 'locked'
+                    ? 'bg-slate-800 text-white border-slate-800 font-bold'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                Locked ({lockedCount})
+              </button>
+            </div>
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex items-center gap-2 text-xs font-semibold overflow-x-auto w-full sm:w-auto">
-            <button
-              onClick={() => setFilterType('all')}
-              className={`px-3.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
-                filterType === 'all'
-                  ? 'bg-slate-900 text-white border-slate-900 font-bold'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              All Jobs ({jobs.length})
-            </button>
-
-            <button
-              onClick={() => setFilterType('unlocked')}
-              className={`px-3.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
-                filterType === 'unlocked'
-                  ? 'bg-emerald-600 text-white border-emerald-600 font-bold'
-                  : 'bg-white text-emerald-800 border-slate-200 hover:bg-emerald-50'
-              }`}
-            >
-              Unlocked Only ({unlockedCount})
-            </button>
-
-            <button
-              onClick={() => setFilterType('locked')}
-              className={`px-3.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
-                filterType === 'locked'
-                  ? 'bg-slate-800 text-white border-slate-800 font-bold'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              Locked ({lockedCount})
-            </button>
-          </div>
+          {/* Category Filter Pills Bar */}
+          {availableCategories.length > 0 && (
+            <div className="pt-2 border-t border-slate-100 flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
+                <Filter className="w-3 h-3" /> Category:
+              </span>
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-3 py-1 rounded-lg font-bold shrink-0 transition-colors cursor-pointer ${
+                  selectedCategory === 'all'
+                    ? 'bg-blue-600 text-white shadow-2xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-900'
+                }`}
+              >
+                All Categories
+              </button>
+              {availableCategories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1 rounded-lg font-bold shrink-0 transition-colors cursor-pointer ${
+                    selectedCategory === cat
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-900'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ================= JOB CARDS GRID ================= */}
@@ -266,7 +311,12 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
                     </div>
 
                     <div>
-                      <div className="flex items-center gap-2 mb-3 pr-20">
+                      <div className="flex flex-wrap items-center gap-1.5 mb-3 pr-20">
+                        {job.category && (
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-50 text-indigo-900 border border-indigo-200">
+                            {job.category}
+                          </span>
+                        )}
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-100">
                           {job.department}
                         </span>

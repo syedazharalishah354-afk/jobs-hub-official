@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SystemSettings, Application, ApplicationStats, JobPosition } from '../types.js';
+import { JOB_CAMPAIGNS, getCampaignUrl } from '../constants/campaigns.js';
 import {
   adminLogin,
   fetchAdminStats,
@@ -38,7 +39,10 @@ import {
   Edit3,
   Briefcase,
   GraduationCap,
-  MapPin
+  MapPin,
+  Share2,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -58,7 +62,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
   const [loggingIn, setLoggingIn] = useState(false);
 
   // Active Admin Tab
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'applications' | 'jobs' | 'settings' | 'security'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'applications' | 'jobs' | 'campaigns' | 'settings' | 'security'>('dashboard');
 
   // Stats & Applications State
   const [stats, setStats] = useState<ApplicationStats | null>(null);
@@ -72,9 +76,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobSearchQuery, setJobSearchQuery] = useState('');
   const [jobQualFilter, setJobQualFilter] = useState('all');
+  const [jobCampaignFilter, setJobCampaignFilter] = useState('all');
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<Partial<JobPosition> | null>(null);
   const [savingJob, setSavingJob] = useState(false);
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
 
   // Selected Application for Review Modal
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
@@ -429,6 +435,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
               </button>
 
               <button
+                onClick={() => setActiveTab('campaigns')}
+                className={`px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  activeTab === 'campaigns' ? 'bg-white text-blue-900 shadow-xs font-bold' : 'text-slate-600 hover:bg-slate-200/60'
+                }`}
+              >
+                <Share2 className="w-4 h-4 text-blue-600" />
+                <span>Ad Campaigns ({JOB_CAMPAIGNS.length})</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('settings')}
                 className={`px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer ${
                   activeTab === 'settings' ? 'bg-white text-blue-900 shadow-xs font-bold' : 'text-slate-600 hover:bg-slate-200/60'
@@ -688,6 +704,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                         <option value="Matric">Matric</option>
                         <option value="Intermediate">Intermediate &amp; Above</option>
                       </select>
+
+                      <select
+                        value={jobCampaignFilter}
+                        onChange={(e) => setJobCampaignFilter(e.target.value)}
+                        className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white font-bold text-blue-900"
+                      >
+                        <option value="all">All Ad Campaigns ({jobs.length})</option>
+                        {JOB_CAMPAIGNS.map(c => (
+                          <option key={c.slug} value={c.slug}>
+                            {c.name} ({jobs.filter(j => (j.campaigns && j.campaigns.includes(c.slug)) || (j as any).campaign === c.slug).length})
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <button
@@ -723,16 +752,35 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                                 (j.requiredSkills && j.requiredSkills.some(s => s.toLowerCase().includes(matchQ)));
 
                               if (!matchesSearch) return false;
-                              if (jobQualFilter === 'Primary') return j.minQualification === 'Primary' || j.minQualification === 'Middle';
-                              if (jobQualFilter === 'Matric') return j.minQualification === 'Matric';
-                              if (jobQualFilter === 'Intermediate') return j.minQualification !== 'Primary' && j.minQualification !== 'Middle' && j.minQualification !== 'Matric';
+                              if (jobQualFilter === 'Primary' && (j.minQualification !== 'Primary' && j.minQualification !== 'Middle')) return false;
+                              if (jobQualFilter === 'Matric' && j.minQualification !== 'Matric') return false;
+                              if (jobQualFilter === 'Intermediate' && (j.minQualification === 'Primary' || j.minQualification === 'Middle' || j.minQualification === 'Matric')) return false;
+
+                              if (jobCampaignFilter !== 'all') {
+                                const inCamp = (j.campaigns && j.campaigns.includes(jobCampaignFilter)) || (j as any).campaign === jobCampaignFilter;
+                                if (!inCamp) return false;
+                              }
                               return true;
                             })
                             .map(job => (
                               <tr key={job.id} className="hover:bg-slate-50 transition-colors">
                                 <td className="p-3">
                                   <div className="font-bold text-slate-900">{job.title}</div>
-                                  <div className="text-[10px] text-slate-500">{job.department}</div>
+                                  <div className="text-[10px] text-slate-500 mb-1">{job.department}</div>
+                                  {job.category && (
+                                    <div className="text-[10px] font-extrabold text-indigo-800 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 inline-block mb-1">
+                                      Category: {job.category}
+                                    </div>
+                                  )}
+                                  {job.campaigns && job.campaigns.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {job.campaigns.map(c => (
+                                        <span key={c} className="text-[9px] px-1.5 py-0.2 bg-blue-50 text-blue-800 rounded border border-blue-200 font-semibold uppercase">
+                                          {c}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="p-3">
                                   <span className="px-2.5 py-1 bg-blue-50 text-blue-900 font-bold rounded-md border border-blue-100 text-[11px]">
@@ -774,6 +822,92 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ----------------- TAB: AD CAMPAIGNS MANAGEMENT ----------------- */}
+              {activeTab === 'campaigns' && (
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-blue-900 to-slate-900 text-white p-6 rounded-2xl shadow-sm space-y-2">
+                    <div className="flex items-center gap-2 text-blue-300 text-xs font-bold uppercase tracking-wider">
+                      <Share2 className="w-4 h-4" />
+                      <span>5-Page Job Campaign / Ad-Based Filtering System</span>
+                    </div>
+                    <h3 className="text-xl font-black">Targeted Job Campaign URLs</h3>
+                    <p className="text-slate-300 text-xs leading-relaxed max-w-3xl">
+                      Each job campaign has its own unique URL for social media ads (Facebook, TikTok, WhatsApp, Google Ads). Visitors coming from an ad link will only see jobs assigned to that campaign. As an administrator, you can manage assigned campaigns for any job vacancy.
+                    </p>
+                  </div>
+
+                  {/* Campaign Cards Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {JOB_CAMPAIGNS.map(camp => {
+                      const assignedJobsCount = jobs.filter(j => 
+                        (j.campaigns && j.campaigns.includes(camp.slug)) || (j as any).campaign === camp.slug
+                      ).length;
+                      const campUrl = `${window.location.origin}${getCampaignUrl(camp.slug)}`;
+
+                      return (
+                        <div key={camp.slug} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-2xl">{camp.icon}</span>
+                              <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-900 font-extrabold text-[11px] border border-blue-200">
+                                {assignedJobsCount} Jobs Assigned
+                              </span>
+                            </div>
+
+                            <h4 className="text-base font-black text-slate-900">{camp.name}</h4>
+                            <p className="text-xs text-slate-600 line-clamp-2">{camp.description}</p>
+                          </div>
+
+                          <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Campaign Public URL</div>
+                            <div className="flex items-center gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 truncate">
+                              <span className="truncate flex-1">{getCampaignUrl(camp.slug)}</span>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(campUrl);
+                                  setCopiedSlug(camp.slug);
+                                  setTimeout(() => setCopiedSlug(null), 2000);
+                                }}
+                                className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer shrink-0"
+                                title="Copy full URL"
+                              >
+                                {copiedSlug === camp.slug ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5 text-slate-600" />
+                                )}
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1">
+                              <a
+                                href={getCampaignUrl(camp.slug)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold text-center flex items-center justify-center gap-1.5 transition-colors"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                                <span>Preview Page</span>
+                              </a>
+
+                              <button
+                                onClick={() => {
+                                  setJobCampaignFilter(camp.slug);
+                                  setActiveTab('jobs');
+                                }}
+                                className="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold text-center transition-colors cursor-pointer"
+                              >
+                                View {assignedJobsCount} Jobs &rarr;
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1190,14 +1324,56 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                     />
                   </div>
 
-                  {/* Department */}
+                  {/* Department / Company */}
                   <div>
-                    <label className="block font-bold text-slate-800 mb-1">Department</label>
+                    <label className="block font-bold text-slate-800 mb-1">Department / Organization / Company</label>
                     <input
                       type="text"
                       value={editingJob.department || ''}
                       onChange={(e) => setEditingJob({ ...editingJob, department: e.target.value })}
-                      placeholder="e.g. Admin Support Services"
+                      placeholder="e.g. DHQ Hospital / Punjab Police / Al-Shifa Pharmacy"
+                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
+                    />
+                  </div>
+
+                  {/* Category / Subcategory */}
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Job Category / Sector</label>
+                    <input
+                      type="text"
+                      list="category-suggestions"
+                      value={editingJob.category || ''}
+                      onChange={(e) => setEditingJob({ ...editingJob, category: e.target.value })}
+                      placeholder="e.g. Government Hospitals & Healthcare / Medical Stores & Pharmacy"
+                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300 font-semibold"
+                    />
+                    <datalist id="category-suggestions">
+                      {JOB_CAMPAIGNS.flatMap(c => c.categories).map((cat, idx) => (
+                        <option key={idx} value={cat} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  {/* Medical Qualification (Optional) */}
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Medical / Registration Requirement (Optional)</label>
+                    <input
+                      type="text"
+                      value={editingJob.medicalQualification || ''}
+                      onChange={(e) => setEditingJob({ ...editingJob, medicalQualification: e.target.value })}
+                      placeholder="e.g. MBBS + PMDC / Pharm-D / PNC Nursing License"
+                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
+                    />
+                  </div>
+
+                  {/* Experience Required */}
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Experience Required</label>
+                    <input
+                      type="text"
+                      value={editingJob.experienceRequired || ''}
+                      onChange={(e) => setEditingJob({ ...editingJob, experienceRequired: e.target.value })}
+                      placeholder="e.g. Fresh / 1 Year House Job / 2 Years Experience"
                       className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
                     />
                   </div>
@@ -1339,6 +1515,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                       <option value="active">Active (Accepting Applications)</option>
                       <option value="closed">Closed</option>
                     </select>
+                  </div>
+
+                  {/* Assigned Ad Campaigns */}
+                  <div className="sm:col-span-2 bg-blue-50/70 p-4 rounded-xl border border-blue-200 space-y-2">
+                    <label className="block font-bold text-blue-950 text-xs">Assigned Ad Campaigns (Multi-Select) *</label>
+                    <p className="text-[11px] text-blue-800">Check which public campaign pages this job vacancy should appear on:</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+                      {JOB_CAMPAIGNS.map(camp => {
+                        const currentCampaigns = editingJob.campaigns || [];
+                        const isChecked = currentCampaigns.includes(camp.slug);
+
+                        const toggleCampaign = () => {
+                          let updated: string[];
+                          if (isChecked) {
+                            updated = currentCampaigns.filter(c => c !== camp.slug);
+                          } else {
+                            updated = [...currentCampaigns, camp.slug];
+                          }
+                          setEditingJob({ ...editingJob, campaigns: updated });
+                        };
+
+                        return (
+                          <label key={camp.slug} className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:border-blue-300">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={toggleCampaign}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span>{camp.icon} {camp.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
 
                 </div>
