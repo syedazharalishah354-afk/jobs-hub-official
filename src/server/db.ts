@@ -1,0 +1,520 @@
+import fs from 'fs';
+import path from 'path';
+import bcrypt from 'bcryptjs';
+import { Application, SystemSettings, JobPosition, AdminUser, UserAccount } from '../types.js';
+
+export interface DBData {
+  users: UserAccount[];
+  applications: Application[];
+  settings: SystemSettings;
+  admin: AdminUser;
+  jobs: JobPosition[];
+}
+
+const DATA_DIR = path.join(process.cwd(), 'data');
+const DB_PATH = path.join(DATA_DIR, 'db.json');
+
+const DEFAULT_JOBS: JobPosition[] = [
+  // --- CATEGORY 1: Primary / Middle (10 Jobs) ---
+  {
+    id: 'job-1',
+    title: 'Data Entry Operator',
+    department: 'Data Management & Operations',
+    minQualification: 'Primary',
+    qualificationRequired: 'Primary / Middle or Higher',
+    jobType: 'Freelance / Remote',
+    ageLimit: '18 - 45 Years',
+    vacancies: 50,
+    location: 'Remote / Work From Home',
+    salaryRange: 'PKR 30,000 - 40,000 / month',
+    deadline: '2026-09-30',
+    description: 'Basic keyboard entry of offline forms into Excel and Google Sheets. Training provided.',
+    requiredSkills: ['Basic Typing', 'Excel', 'Data Checking'],
+    status: 'active'
+  },
+  {
+    id: 'job-2',
+    title: 'Online Form Filling Assistant',
+    department: 'Digital Administration',
+    minQualification: 'Primary',
+    qualificationRequired: 'Primary / Middle or Higher',
+    jobType: 'Part-Time / Online',
+    ageLimit: '18 - 45 Years',
+    vacancies: 40,
+    location: 'Remote / Anywhere in Pakistan',
+    salaryRange: 'PKR 25,000 - 35,000 / month',
+    deadline: '2026-09-30',
+    description: 'Assist in submitting online customer registrations and verifying form field values accurately.',
+    requiredSkills: ['Internet Browsing', 'Form Filling', 'Attention to Detail'],
+    status: 'active'
+  },
+  {
+    id: 'job-3',
+    title: 'Product Listing Assistant',
+    department: 'E-commerce Operations',
+    minQualification: 'Primary',
+    qualificationRequired: 'Primary / Middle or Higher',
+    jobType: 'Freelance / Task Based',
+    ageLimit: '18 - 40 Years',
+    vacancies: 35,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 28,000 - 38,000 / month',
+    deadline: '2026-09-25',
+    description: 'Copying product titles, images, and prices into inventory software and marketplace stores.',
+    requiredSkills: ['Copy Paste', 'Product Cataloging', 'Basic English'],
+    status: 'active'
+  },
+  {
+    id: 'job-4',
+    title: 'Simple Typing Work',
+    department: 'Document Services',
+    minQualification: 'Primary',
+    qualificationRequired: 'Primary / Middle or Higher',
+    jobType: 'Freelance / Remote',
+    ageLimit: '18 - 50 Years',
+    vacancies: 60,
+    location: 'Remote / Work From Home',
+    salaryRange: 'PKR 25,000 - 35,000 / month',
+    deadline: '2026-10-15',
+    description: 'Typing scanned Urdu and English text documents into Word format with standard speed.',
+    requiredSkills: ['Typing', 'MS Word', 'Document Formatting'],
+    status: 'active'
+  },
+  {
+    id: 'job-5',
+    title: 'Online Chat Support Assistant',
+    department: 'Customer Relations',
+    minQualification: 'Primary',
+    qualificationRequired: 'Primary / Middle or Higher',
+    jobType: 'Remote Shift Work',
+    ageLimit: '18 - 35 Years',
+    vacancies: 30,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 32,000 - 42,000 / month',
+    deadline: '2026-09-28',
+    description: 'Answering basic customer chat inquiries using canned responses and forwarding tickets.',
+    requiredSkills: ['Live Chat', 'Customer Care', 'Communication'],
+    status: 'active'
+  },
+  {
+    id: 'job-6',
+    title: 'Social Media Posting Assistant',
+    department: 'Marketing & Outreach',
+    minQualification: 'Primary',
+    qualificationRequired: 'Primary / Middle or Higher',
+    jobType: 'Part-Time / Remote',
+    ageLimit: '18 - 35 Years',
+    vacancies: 45,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 25,000 - 35,000 / month',
+    deadline: '2026-10-05',
+    description: 'Publishing pre-approved promotional posts and images across client WhatsApp and Facebook groups.',
+    requiredSkills: ['Facebook', 'WhatsApp', 'Social Media'],
+    status: 'active'
+  },
+  {
+    id: 'job-7',
+    title: 'Virtual Assistant — Basic Tasks',
+    department: 'Admin Support Services',
+    minQualification: 'Primary',
+    qualificationRequired: 'Primary / Middle or Higher',
+    jobType: 'Freelance / Hourly',
+    ageLimit: '18 - 40 Years',
+    vacancies: 25,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 30,000 - 40,000 / month',
+    deadline: '2026-09-30',
+    description: 'Handling routine administrative tasks like schedule reminders, link organization, and file downloads.',
+    requiredSkills: ['Task Management', 'Google Drive', 'Organization'],
+    status: 'active'
+  },
+  {
+    id: 'job-8',
+    title: 'Image Upload Assistant',
+    department: 'Digital Media Operations',
+    minQualification: 'Primary',
+    qualificationRequired: 'Primary / Middle or Higher',
+    jobType: 'Freelance / Task Based',
+    ageLimit: '18 - 45 Years',
+    vacancies: 30,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 22,000 - 32,000 / month',
+    deadline: '2026-09-20',
+    description: 'Uploading and tagging photo galleries for events, web products, and digital archives.',
+    requiredSkills: ['File Handling', 'Image Tagging', 'Basic Web Navigation'],
+    status: 'active'
+  },
+  {
+    id: 'job-9',
+    title: 'Content Upload Assistant',
+    department: 'Web Publishing',
+    minQualification: 'Primary',
+    qualificationRequired: 'Primary / Middle or Higher',
+    jobType: 'Part-Time / Online',
+    ageLimit: '18 - 40 Years',
+    vacancies: 20,
+    location: 'Remote / Work From Home',
+    salaryRange: 'PKR 28,000 - 38,000 / month',
+    deadline: '2026-10-10',
+    description: 'Uploading written articles and PDFs into portal CMS and assigning appropriate categories.',
+    requiredSkills: ['Data Entry', 'CMS Upload', 'File Formatting'],
+    status: 'active'
+  },
+  {
+    id: 'job-10',
+    title: 'Online Survey / Research Assistant',
+    department: 'Market Intelligence',
+    minQualification: 'Primary',
+    qualificationRequired: 'Primary / Middle or Higher',
+    jobType: 'Freelance / Remote',
+    ageLimit: '18 - 45 Years',
+    vacancies: 50,
+    location: 'Remote / Anywhere in Pakistan',
+    salaryRange: 'PKR 25,000 - 35,000 / month',
+    deadline: '2026-10-01',
+    description: 'Gathering public survey feedback, recording consumer responses, and compiling daily tally reports.',
+    requiredSkills: ['Surveying', 'Data Collection', 'Feedback Recording'],
+    status: 'active'
+  },
+
+  // --- CATEGORY 2: Matric (5 Additional Jobs, Total 15) ---
+  {
+    id: 'job-11',
+    title: 'Video Editing Assistant',
+    department: 'Multimedia & Creative Studio',
+    minQualification: 'Matric',
+    qualificationRequired: 'Matric or Higher',
+    jobType: 'Freelance / Project Based',
+    ageLimit: '18 - 35 Years',
+    vacancies: 25,
+    location: 'Remote / Work From Home',
+    salaryRange: 'PKR 40,000 - 55,000 / month',
+    deadline: '2026-09-28',
+    description: 'Trimming short video clips, inserting titles, adding background audio and subtitles for YouTube shorts & Reels.',
+    requiredSkills: ['CapCut', 'Premiere Pro', 'Video Trimming', 'Subtitles'],
+    status: 'active'
+  },
+  {
+    id: 'job-12',
+    title: 'Graphic Design Assistant',
+    department: 'Creative & Brand Team',
+    minQualification: 'Matric',
+    qualificationRequired: 'Matric or Higher',
+    jobType: 'Freelance / Remote',
+    ageLimit: '18 - 35 Years',
+    vacancies: 30,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 38,000 - 52,000 / month',
+    deadline: '2026-09-26',
+    description: 'Designing promotional flyers, Canva banners, social media thumbnails, and basic photo editing.',
+    requiredSkills: ['Canva', 'Photoshop', 'Banner Design', 'Color Aesthetics'],
+    status: 'active'
+  },
+  {
+    id: 'job-13',
+    title: 'Customer Support Representative',
+    department: 'Helpdesk & Client Care',
+    minQualification: 'Matric',
+    qualificationRequired: 'Matric or Higher',
+    jobType: 'Full-Time / Remote',
+    ageLimit: '18 - 32 Years',
+    vacancies: 40,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 42,000 - 58,000 / month',
+    deadline: '2026-10-05',
+    description: 'Handling incoming telephonic and chat queries regarding test scheduling, application fees, and results.',
+    requiredSkills: ['Call Handling', 'Urdu / English Fluency', 'CRM Software'],
+    status: 'active'
+  },
+  {
+    id: 'job-14',
+    title: 'E-commerce Store Assistant',
+    department: 'Online Commerce Unit',
+    minQualification: 'Matric',
+    qualificationRequired: 'Matric or Higher',
+    jobType: 'Remote Shift Work',
+    ageLimit: '18 - 35 Years',
+    vacancies: 20,
+    location: 'Remote / Work From Home',
+    salaryRange: 'PKR 35,000 - 50,000 / month',
+    deadline: '2026-10-12',
+    description: 'Managing online store orders, dispatch tracking, customer return requests, and stock log updates.',
+    requiredSkills: ['Shopify / WooCommerce', 'Order Dispatch', 'Inventory'],
+    status: 'active'
+  },
+  {
+    id: 'job-15',
+    title: 'Voice Over / Audio Recording Assistant',
+    department: 'Media Production',
+    minQualification: 'Matric',
+    qualificationRequired: 'Matric or Higher',
+    jobType: 'Freelance / Per Project',
+    ageLimit: '18 - 40 Years',
+    vacancies: 15,
+    location: 'Remote / Home Studio',
+    salaryRange: 'PKR 35,000 - 50,000 / month',
+    deadline: '2026-09-30',
+    description: 'Recording clear audio voiceovers for educational videos, commercial announcements, and IVR lines.',
+    requiredSkills: ['Voice Modulation', 'Urdu Diction', 'Audio Editing'],
+    status: 'active'
+  },
+
+  // --- CATEGORY 3: Intermediate and Above (10 Additional Jobs, Total 25) ---
+  {
+    id: 'job-16',
+    title: 'Content Writer',
+    department: 'Editorial & Publications',
+    minQualification: 'Intermediate',
+    qualificationRequired: 'Intermediate or Higher',
+    jobType: 'Freelance / Remote',
+    ageLimit: '18 - 38 Years',
+    vacancies: 30,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 50,000 - 70,000 / month',
+    deadline: '2026-10-15',
+    description: 'Writing engaging blog posts, portal notices, job guides, and educational articles with high quality.',
+    requiredSkills: ['Article Writing', 'SEO Content', 'Grammar', 'Research'],
+    status: 'active'
+  },
+  {
+    id: 'job-17',
+    title: 'Copywriter',
+    department: 'Marketing & Brand Communications',
+    minQualification: 'Intermediate',
+    qualificationRequired: 'Intermediate or Higher',
+    jobType: 'Freelance / Contract',
+    ageLimit: '18 - 38 Years',
+    vacancies: 15,
+    location: 'Remote / Work From Home',
+    salaryRange: 'PKR 55,000 - 75,000 / month',
+    deadline: '2026-10-10',
+    description: 'Crafting persuasive ad copies, landing page text, email newsletters, and promotional slogans.',
+    requiredSkills: ['Persuasive Writing', 'Ad Copies', 'Email Campaigns'],
+    status: 'active'
+  },
+  {
+    id: 'job-18',
+    title: 'Social Media Manager',
+    department: 'Digital Marketing Division',
+    minQualification: 'Intermediate',
+    qualificationRequired: 'Intermediate or Higher',
+    jobType: 'Full-Time / Remote',
+    ageLimit: '20 - 38 Years',
+    vacancies: 12,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 60,000 - 85,000 / month',
+    deadline: '2026-10-20',
+    description: 'Overseeing social channels strategy, content calendars, community growth, and campaign analytics.',
+    requiredSkills: ['Social Strategy', 'Meta Business Suite', 'Analytics'],
+    status: 'active'
+  },
+  {
+    id: 'job-19',
+    title: 'Digital Marketing Specialist',
+    department: 'Growth Marketing',
+    minQualification: 'Intermediate',
+    qualificationRequired: 'Intermediate or Higher',
+    jobType: 'Full-Time / Remote',
+    ageLimit: '20 - 40 Years',
+    vacancies: 10,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 65,000 - 90,000 / month',
+    deadline: '2026-10-25',
+    description: 'Running paid ad campaigns on Google Ads, Meta Ads, TikTok Ads, and tracking conversion ROI.',
+    requiredSkills: ['Google Ads', 'Facebook Ads', 'PPC', 'Funnel Optimization'],
+    status: 'active'
+  },
+  {
+    id: 'job-20',
+    title: 'SEO Specialist',
+    department: 'Search Engine Optimization',
+    minQualification: 'Intermediate',
+    qualificationRequired: 'Intermediate or Higher',
+    jobType: 'Remote / Hybrid',
+    ageLimit: '20 - 40 Years',
+    vacancies: 10,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 60,000 - 85,000 / month',
+    deadline: '2026-10-18',
+    description: 'On-page SEO, technical audits, backlink building, keyword research, and Search Console management.',
+    requiredSkills: ['Keyword Research', 'Technical SEO', 'Ahrefs', 'Search Console'],
+    status: 'active'
+  },
+  {
+    id: 'job-21',
+    title: 'WordPress Developer',
+    department: 'Web Engineering',
+    minQualification: 'Intermediate',
+    qualificationRequired: 'Intermediate or Higher',
+    jobType: 'Freelance / Remote',
+    ageLimit: '18 - 40 Years',
+    vacancies: 15,
+    location: 'Remote / Work From Home',
+    salaryRange: 'PKR 65,000 - 95,000 / month',
+    deadline: '2026-10-30',
+    description: 'Customizing WordPress themes, Elementor layouts, WooCommerce setups, and plugin customization.',
+    requiredSkills: ['WordPress', 'PHP', 'Elementor', 'WooCommerce', 'CSS'],
+    status: 'active'
+  },
+  {
+    id: 'job-22',
+    title: 'Web Developer',
+    department: 'Software & Web Systems',
+    minQualification: 'Intermediate',
+    qualificationRequired: 'Intermediate or Higher',
+    jobType: 'Full-Time / Remote',
+    ageLimit: '20 - 40 Years',
+    vacancies: 20,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 80,000 - 120,000 / month',
+    deadline: '2026-11-05',
+    description: 'Building responsive web interfaces and full-stack applications using React, Node.js, and TypeScript.',
+    requiredSkills: ['React', 'Node.js', 'TypeScript', 'Tailwind CSS', 'REST API'],
+    status: 'active'
+  },
+  {
+    id: 'job-23',
+    title: 'Mobile App Developer',
+    department: 'App Development Division',
+    minQualification: 'Intermediate',
+    qualificationRequired: 'Intermediate or Higher',
+    jobType: 'Full-Time / Remote',
+    ageLimit: '20 - 40 Years',
+    vacancies: 10,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 85,000 - 130,000 / month',
+    deadline: '2026-11-10',
+    description: 'Developing cross-platform mobile apps for Android & iOS using Flutter or React Native.',
+    requiredSkills: ['Flutter / React Native', 'Dart', 'Mobile UI', 'API Integration'],
+    status: 'active'
+  },
+  {
+    id: 'job-24',
+    title: 'UI/UX Designer',
+    department: 'Product Design Studio',
+    minQualification: 'Intermediate',
+    qualificationRequired: 'Intermediate or Higher',
+    jobType: 'Freelance / Contract',
+    ageLimit: '20 - 38 Years',
+    vacancies: 8,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 70,000 - 110,000 / month',
+    deadline: '2026-10-28',
+    description: 'Designing wireframes, interactive Figma prototypes, design systems, and mobile/web app user journeys.',
+    requiredSkills: ['Figma', 'Prototyping', 'User Research', 'Design Systems'],
+    status: 'active'
+  },
+  {
+    id: 'job-25',
+    title: 'Software Developer',
+    department: 'Core Engineering Dept',
+    minQualification: 'Intermediate',
+    qualificationRequired: 'Intermediate or Higher',
+    jobType: 'Full-Time / Remote',
+    ageLimit: '20 - 42 Years',
+    vacancies: 15,
+    location: 'Remote / Online',
+    salaryRange: 'PKR 90,000 - 150,000 / month',
+    deadline: '2026-11-15',
+    description: 'Designing scalable backend APIs, database architecture, automated tests, and cloud deployments.',
+    requiredSkills: ['JavaScript / Python', 'SQL / NoSQL', 'System Architecture', 'Git'],
+    status: 'active'
+  }
+];
+
+const DEFAULT_SETTINGS: SystemSettings = {
+  applicationFee: 300,
+  jazzcash: {
+    accountTitle: 'JobsHub Official Portal',
+    accountNumber: '0301-8899771',
+    instructions: 'Open JazzCash App or dial *786#. Select Send Money -> To JazzCash Account. Enter Account Number 0301-8899771. Enter Amount 300 PKR. Confirm payment and take a screenshot.'
+  },
+  easypaisa: {
+    accountTitle: 'JobsHub Official Portal',
+    accountNumber: '0345-8899772',
+    instructions: 'Open Easypaisa App or dial *786#. Select Send Money -> EasyPaisa Transfer. Enter Account Number 0345-8899772. Enter Amount 300 PKR. Complete payment and take a screenshot.'
+  }
+};
+
+function ensureDir(dir: string) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+export function initDB(): DBData {
+  ensureDir(DATA_DIR);
+
+  if (!fs.existsSync(DB_PATH)) {
+    const salt = bcrypt.genSaltSync(10);
+    const initialPasswordHash = bcrypt.hashSync('Sho2026@', salt);
+
+    const initialData: DBData = {
+      users: [],
+      applications: [],
+      settings: DEFAULT_SETTINGS,
+      admin: {
+        id: 'admin-1',
+        username: 'umar',
+        passwordHash: initialPasswordHash
+      },
+      jobs: DEFAULT_JOBS
+    };
+
+    fs.writeFileSync(DB_PATH, JSON.stringify(initialData, null, 2), 'utf-8');
+    return initialData;
+  }
+
+  try {
+    const raw = fs.readFileSync(DB_PATH, 'utf-8');
+    const parsed = JSON.parse(raw) as DBData;
+    // ensure missing keys or incomplete default jobs upgrade
+    if (!parsed.users) parsed.users = [];
+    if (!parsed.settings) parsed.settings = DEFAULT_SETTINGS;
+    if (!parsed.jobs || parsed.jobs.length < 25 || !parsed.jobs[0].minQualification) {
+      parsed.jobs = DEFAULT_JOBS;
+      fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
+    }
+    if (!parsed.applications) parsed.applications = [];
+
+    // Ensure admin credentials match umar / Sho2026@
+    if (!parsed.admin || parsed.admin.username !== 'umar') {
+      const salt = bcrypt.genSaltSync(10);
+      parsed.admin = {
+        id: 'admin-1',
+        username: 'umar',
+        passwordHash: bcrypt.hashSync('Sho2026@', salt)
+      };
+      fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error('Error reading DB, re-initializing', err);
+    const salt = bcrypt.genSaltSync(10);
+    const initialData: DBData = {
+      users: [],
+      applications: [],
+      settings: DEFAULT_SETTINGS,
+      admin: {
+        id: 'admin-1',
+        username: 'umar',
+        passwordHash: bcrypt.hashSync('Sho2026@', salt)
+      },
+      jobs: DEFAULT_JOBS
+    };
+    fs.writeFileSync(DB_PATH, JSON.stringify(initialData, null, 2), 'utf-8');
+    return initialData;
+  }
+}
+
+export function saveDB(data: DBData): void {
+  ensureDir(DATA_DIR);
+  const tempPath = DB_PATH + '.tmp';
+  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
+  fs.renameSync(tempPath, DB_PATH);
+}
+
+export function getDB(): DBData {
+  return initDB();
+}
