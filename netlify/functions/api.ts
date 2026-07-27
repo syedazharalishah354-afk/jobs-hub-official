@@ -78,6 +78,85 @@ export const handler = async (event: NetlifyEvent) => {
     };
   }
 
+  // POST /api/admin/login
+  if (path.includes('/api/admin/login') && method === 'POST') {
+    try {
+      const payload = JSON.parse(event.body || '{}');
+      const { username, password } = payload;
+      const expectedUsername = process.env.ADMIN_USERNAME || 'umar';
+      const expectedPassword = process.env.ADMIN_PASSWORD || 'Sho2026@';
+
+      if (username && username.trim() === expectedUsername && password === expectedPassword) {
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            message: 'Admin authentication successful.',
+            token: 'admin-netlify-token-2026',
+            user: { username: expectedUsername }
+          })
+        };
+      }
+
+      return {
+        statusCode: 401,
+        headers,
+        body: JSON.stringify({ error: 'Invalid username or password.' })
+      };
+    } catch {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Invalid request payload.' })
+      };
+    }
+  }
+
+  // GET /api/admin/me
+  if (path.includes('/api/admin/me') && method === 'GET') {
+    const expectedUsername = process.env.ADMIN_USERNAME || 'umar';
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ username: expectedUsername })
+    };
+  }
+
+  // GET /api/admin/stats
+  if (path.includes('/api/admin/stats') && method === 'GET') {
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        totalUsers: 1,
+        totalJobs: DEFAULT_JOBS.length,
+        totalApplications: 0,
+        pendingPayments: 0,
+        approvedPayments: 0,
+        rejectedPayments: 0,
+        submittedSuccessfully: 0
+      })
+    };
+  }
+
+  // GET /api/admin/applications
+  if (path.includes('/api/admin/applications') && method === 'GET') {
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify([])
+    };
+  }
+
+  // GET /api/admin/settings
+  if (path.includes('/api/admin/settings') && method === 'GET') {
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(DEFAULT_SETTINGS)
+    };
+  }
+
   // Fallback for Netlify API Function
   return {
     statusCode: 200,

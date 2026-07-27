@@ -185,9 +185,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
     setLoginError(null);
     try {
       const res = await adminLogin(loginUser, loginPass);
-      localStorage.setItem('admin_token', res.token);
-      setToken(res.token);
-      setAdminUsername(res.user.username);
+      if (res && res.token) {
+        localStorage.setItem('admin_token', res.token);
+        setToken(res.token);
+        const uname = (res.user && res.user.username) ? res.user.username : 'umar';
+        setAdminUsername(uname);
+      } else {
+        setLoginError('Invalid username or password.');
+      }
     } catch (err: any) {
       setLoginError(err.message || 'Invalid username or password.');
     } finally {

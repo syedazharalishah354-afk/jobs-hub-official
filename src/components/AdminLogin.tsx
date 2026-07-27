@@ -32,10 +32,14 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
     setLoading(true);
     try {
       const res = await adminLogin(username.trim(), password);
-      localStorage.setItem('admin_token', res.token);
-      onSuccess(res.token);
-      onClose();
-      setPassword('');
+      if (res && res.token) {
+        localStorage.setItem('admin_token', res.token);
+        onSuccess(res.token);
+        onClose();
+        setPassword('');
+      } else {
+        setError('Invalid username or password.');
+      }
     } catch (err: any) {
       setError('Invalid username or password.');
     } finally {
