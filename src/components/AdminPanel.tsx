@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SystemSettings, Application, ApplicationStats, JobPosition } from '../types.js';
+import { QUALIFICATION_CATEGORIES, getMinQualificationRank, getQualificationRank } from '../utils/qualification.js';
 import { JOB_CAMPAIGNS, getCampaignUrl } from '../constants/campaigns.js';
 import {
   adminLogin,
@@ -442,9 +443,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
     }
 
     if (jobQualFilter !== 'all') {
-      if (jobQualFilter === 'Primary' && (j.minQualification !== 'Primary' && j.minQualification !== 'Middle')) return false;
-      if (jobQualFilter === 'Matric' && j.minQualification !== 'Matric') return false;
-      if (jobQualFilter === 'Intermediate' && (j.minQualification === 'Primary' || j.minQualification === 'Middle' || j.minQualification === 'Matric')) return false;
+      const targetRank = getQualificationRank(jobQualFilter);
+      const jobRank = getMinQualificationRank(j.minQualification);
+      if (targetRank !== jobRank) return false;
     }
 
     if (jobTypeFilter !== 'all') {
@@ -981,9 +982,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                           className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-medium text-slate-800"
                         >
                           <option value="all">All Qualifications</option>
-                          <option value="Primary">Primary / Middle</option>
-                          <option value="Matric">Matric</option>
-                          <option value="Intermediate">Intermediate &amp; Above</option>
+                          {QUALIFICATION_CATEGORIES.map(qual => (
+                            <option key={qual} value={qual}>{qual}</option>
+                          ))}
                         </select>
                       </div>
 
@@ -1797,22 +1798,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                   <div>
                     <label className="block font-bold text-slate-800 mb-1">Minimum Qualification Tier *</label>
                     <select
-                      value={editingJob.minQualification || 'Primary'}
+                      value={editingJob.minQualification || 'No Formal Education'}
                       onChange={(e) => setEditingJob({ ...editingJob, minQualification: e.target.value })}
                       className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300 font-bold"
                     >
-                      <option value="Primary">Primary (Level 1 Access)</option>
-                      <option value="Middle">Middle (Level 1 Access)</option>
-                      <option value="Matric">Matric (Level 2 Access)</option>
-                      <option value="Matriculation">Matriculation (Level 2 Access)</option>
-                      <option value="Intermediate">Intermediate (Level 3 Access)</option>
-                      <option value="FA">FA (Level 3 Access)</option>
-                      <option value="FSc">FSc (Level 3 Access)</option>
-                      <option value="ICS">ICS (Level 3 Access)</option>
-                      <option value="I.Com">I.Com (Level 3 Access)</option>
-                      <option value="Bachelor">Bachelor (Level 3 Access)</option>
-                      <option value="BS">BS (Level 3 Access)</option>
-                      <option value="Master">Master (Level 3 Access)</option>
+                      {QUALIFICATION_CATEGORIES.map(qual => (
+                        <option key={qual} value={qual}>{qual}</option>
+                      ))}
                     </select>
                   </div>
 

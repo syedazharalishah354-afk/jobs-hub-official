@@ -147,8 +147,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Social Media Posting Assistant",
     "department": "Marketing & Outreach",
     "category": "Sales & Marketing",
-    "minQualification": "Primary",
-    "qualificationRequired": "Primary / Middle or Higher",
+    "minQualification": "Intermediate",
+    "qualificationRequired": "Intermediate / FA / FSc",
     "jobType": "Part-Time / Remote",
     "ageLimit": "18 - 35 Years",
     "vacancies": 45,
@@ -167,7 +167,7 @@ export const AUDITED_JOBS: JobPosition[] = [
       "suthra-punjab",
       "private"
     ],
-    "qualification": "Primary / Middle or Higher",
+    "qualification": "Intermediate / FA / FSc",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -260,8 +260,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Online Survey / Research Assistant",
     "department": "Market Intelligence",
     "category": "Office Jobs",
-    "minQualification": "Primary",
-    "qualificationRequired": "Primary / Middle or Higher",
+    "minQualification": "PhD",
+    "qualificationRequired": "PhD / Doctorate Degree Required",
     "jobType": "Freelance / Remote",
     "ageLimit": "18 - 45 Years",
     "vacancies": 50,
@@ -280,7 +280,7 @@ export const AUDITED_JOBS: JobPosition[] = [
       "suthra-punjab",
       "government"
     ],
-    "qualification": "Primary / Middle or Higher",
+    "qualification": "PhD / Doctorate Degree Required",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -433,7 +433,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Editorial & Publications",
     "category": "Office Jobs",
     "minQualification": "Intermediate",
-    "qualificationRequired": "Intermediate or Higher",
+    "qualificationRequired": "Intermediate / FA / FSc",
     "jobType": "Freelance / Remote",
     "ageLimit": "18 - 38 Years",
     "vacancies": 30,
@@ -453,7 +453,7 @@ export const AUDITED_JOBS: JobPosition[] = [
       "government",
       "private"
     ],
-    "qualification": "Intermediate or Higher",
+    "qualification": "Intermediate / FA / FSc",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -491,7 +491,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Digital Marketing Division",
     "category": "Sales & Marketing",
     "minQualification": "Intermediate",
-    "qualificationRequired": "Intermediate or Higher",
+    "qualificationRequired": "Intermediate / FA / FSc",
     "jobType": "Full-Time / Remote",
     "ageLimit": "20 - 38 Years",
     "vacancies": 12,
@@ -509,7 +509,7 @@ export const AUDITED_JOBS: JobPosition[] = [
       "private",
       "government"
     ],
-    "qualification": "Intermediate or Higher",
+    "qualification": "Intermediate / FA / FSc",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -518,8 +518,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Digital Marketing Specialist",
     "department": "Growth Marketing",
     "category": "Sales & Marketing",
-    "minQualification": "Intermediate",
-    "qualificationRequired": "Intermediate or Higher",
+    "minQualification": "PhD",
+    "qualificationRequired": "PhD / Doctorate Degree Required",
     "jobType": "Full-Time / Remote",
     "ageLimit": "20 - 40 Years",
     "vacancies": 10,
@@ -538,7 +538,7 @@ export const AUDITED_JOBS: JobPosition[] = [
       "private",
       "government"
     ],
-    "qualification": "Intermediate or Higher",
+    "qualification": "PhD / Doctorate Degree Required",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -694,8 +694,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Software Developer",
     "department": "Core Engineering Dept",
     "category": "IT & Software",
-    "minQualification": "Intermediate",
-    "qualificationRequired": "Intermediate or Higher",
+    "minQualification": "Bachelor",
+    "qualificationRequired": "Bachelor / BS Degree",
     "jobType": "Full-Time / Remote",
     "ageLimit": "20 - 42 Years",
     "vacancies": 15,
@@ -714,7 +714,7 @@ export const AUDITED_JOBS: JobPosition[] = [
       "government",
       "private"
     ],
-    "qualification": "Intermediate or Higher",
+    "qualification": "Bachelor / BS Degree",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -724,7 +724,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "District Headquarter Hospital (DHQ)",
     "category": "Government Jobs",
     "minQualification": "Bachelor",
-    "qualificationRequired": "MBBS or Equivalent Medical Degree",
+    "qualificationRequired": "Bachelor / BS Degree",
     "medicalQualification": "MBBS + PMDC / PMC Registration Mandatory",
     "experienceRequired": "1 Year House Job Completion",
     "jobType": "Full-Time / Govt Regular Post",
@@ -744,7 +744,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "government"
     ],
-    "qualification": "MBBS or Equivalent Medical Degree",
+    "qualification": "Bachelor / BS Degree",
     "experience": "1 Year House Job Completion"
   },
   {
@@ -781,8 +781,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Govt Hospital Pharmacist",
     "department": "Department of Health & Drug Control",
     "category": "Government Jobs",
-    "minQualification": "Bachelor",
-    "qualificationRequired": "Pharm-D (Doctor of Pharmacy)",
+    "minQualification": "Master",
+    "qualificationRequired": "Master / MA / MSc Degree",
     "medicalQualification": "Category A Pharmacy Council Registration",
     "experienceRequired": "Fresh Graduates Eligible",
     "jobType": "Full-Time Regular",
@@ -801,7 +801,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "government"
     ],
-    "qualification": "Pharm-D (Doctor of Pharmacy)",
+    "qualification": "Master / MA / MSc Degree",
     "experience": "Fresh Graduates Eligible"
   },
   {
@@ -917,8 +917,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Senior Pharmacist & Store Incharge",
     "department": "Al-Shifa Pharmacy Chain",
     "category": "Healthcare",
-    "minQualification": "Bachelor",
-    "qualificationRequired": "Pharm-D / Doctor of Pharmacy",
+    "minQualification": "Master",
+    "qualificationRequired": "Master / MA / MSc Degree",
     "medicalQualification": "Category A Pharmacy Council License",
     "experienceRequired": "1 - 3 Years Pharmacy Management",
     "jobType": "Full-Time Shift",
@@ -937,7 +937,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "private"
     ],
-    "qualification": "Pharm-D / Doctor of Pharmacy",
+    "qualification": "Master / MA / MSc Degree",
     "experience": "1 - 3 Years Pharmacy Management"
   },
   {
@@ -1000,7 +1000,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Pak Cool Tech Solutions",
     "category": "Factory Worker",
     "minQualification": "Diploma",
-    "qualificationRequired": "DAE HVAC / Refrigeration Certificate",
+    "qualificationRequired": "Diploma (DAE) / Technical Certification",
     "experienceRequired": "2 Years AC Repair & Installation",
     "jobType": "Full-Time Commercial Maintenance",
     "ageLimit": "20 - 42 Years",
@@ -1018,7 +1018,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "private"
     ],
-    "qualification": "DAE HVAC / Refrigeration Certificate",
+    "qualification": "Diploma (DAE) / Technical Certification",
     "experience": "2 Years AC Repair & Installation"
   },
   {
@@ -1027,7 +1027,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Shifa Care Specialist Hospital",
     "category": "Healthcare",
     "minQualification": "Bachelor",
-    "qualificationRequired": "MBBS Degree + PMDC Registration",
+    "qualificationRequired": "Bachelor / BS Degree",
     "medicalQualification": "PMDC / PMC Valid License",
     "experienceRequired": "1 Year Post House Job Experience",
     "jobType": "Full-Time Hospital Duty",
@@ -1046,7 +1046,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "private"
     ],
-    "qualification": "MBBS Degree + PMDC Registration",
+    "qualification": "Bachelor / BS Degree",
     "experience": "1 Year Post House Job Experience"
   },
   {
@@ -1081,8 +1081,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Cleaner",
     "department": "Suthra Punjab Sanitation Wing",
     "category": "Factory Worker",
-    "minQualification": "Primary",
-    "qualificationRequired": "Primary Pass",
+    "minQualification": "No Formal Education",
+    "qualificationRequired": "No Formal Education Required",
     "jobType": "Full-Time / Govt Contract",
     "ageLimit": "18 - 45 Years",
     "vacancies": 120,
@@ -1099,7 +1099,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "suthra-punjab"
     ],
-    "qualification": "Primary Pass",
+    "qualification": "No Formal Education Required",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -1108,8 +1108,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Sweeper",
     "department": "Suthra Punjab Waste Management Unit",
     "category": "Factory Worker",
-    "minQualification": "Primary",
-    "qualificationRequired": "Primary Pass",
+    "minQualification": "No Formal Education",
+    "qualificationRequired": "No Formal Education Required",
     "jobType": "Full-Time / Shift Work",
     "ageLimit": "18 - 45 Years",
     "vacancies": 150,
@@ -1126,7 +1126,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "suthra-punjab"
     ],
-    "qualification": "Primary Pass",
+    "qualification": "No Formal Education Required",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -1136,7 +1136,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Urban Cleanliness & Sanitation Dept",
     "category": "Factory Worker",
     "minQualification": "Middle",
-    "qualificationRequired": "Middle / Primary",
+    "qualificationRequired": "Middle Pass",
     "jobType": "Full-Time Field Duty",
     "ageLimit": "18 - 40 Years",
     "vacancies": 100,
@@ -1153,7 +1153,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "suthra-punjab"
     ],
-    "qualification": "Middle / Primary",
+    "qualification": "Middle Pass",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -1162,8 +1162,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Garbage Collector",
     "department": "Solid Waste Management Division",
     "category": "Private Jobs",
-    "minQualification": "Primary",
-    "qualificationRequired": "Primary Pass",
+    "minQualification": "No Formal Education",
+    "qualificationRequired": "No Formal Education Required",
     "jobType": "Full-Time Shift Duty",
     "ageLimit": "18 - 45 Years",
     "vacancies": 80,
@@ -1180,7 +1180,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "suthra-punjab"
     ],
-    "qualification": "Primary Pass",
+    "qualification": "No Formal Education Required",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -1216,8 +1216,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Drain Cleaner",
     "department": "Sewerage & Drain Maintenance Wing",
     "category": "Factory Worker",
-    "minQualification": "Primary",
-    "qualificationRequired": "Primary Pass",
+    "minQualification": "No Formal Education",
+    "qualificationRequired": "No Formal Education Required",
     "jobType": "Full-Time / Emergency Operations",
     "ageLimit": "18 - 42 Years",
     "vacancies": 60,
@@ -1234,7 +1234,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "suthra-punjab"
     ],
-    "qualification": "Primary Pass",
+    "qualification": "No Formal Education Required",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -1243,8 +1243,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Street Cleaner",
     "department": "Municipal Public Way Care",
     "category": "Factory Worker",
-    "minQualification": "Primary",
-    "qualificationRequired": "Primary Pass",
+    "minQualification": "No Formal Education",
+    "qualificationRequired": "No Formal Education Required",
     "jobType": "Full-Time Outdoor Duty",
     "ageLimit": "18 - 45 Years",
     "vacancies": 90,
@@ -1261,7 +1261,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "suthra-punjab"
     ],
-    "qualification": "Primary Pass",
+    "qualification": "No Formal Education Required",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -1270,8 +1270,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "title": "Field Worker",
     "department": "Suthra Punjab Field Operations",
     "category": "Factory Worker",
-    "minQualification": "Matric",
-    "qualificationRequired": "Matriculation (Science/Arts)",
+    "minQualification": "No Formal Education",
+    "qualificationRequired": "No Formal Education Required",
     "jobType": "Full-Time Field Duty",
     "ageLimit": "18 - 35 Years",
     "vacancies": 85,
@@ -1288,7 +1288,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "suthra-punjab"
     ],
-    "qualification": "Matriculation (Science/Arts)",
+    "qualification": "No Formal Education Required",
     "experience": "Fresh / 0-1 Year Experience",
     "experienceRequired": "Fresh / 0-1 Year Experience"
   },
@@ -3422,8 +3422,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "FC Headquarters Recruitment Branch",
     "organization": "Frontier Corps (FC KP & FC Balochistan HQ)",
     "category": "Government Jobs",
-    "minQualification": "Middle",
-    "qualificationRequired": "Middle / DAE Auto Electrical",
+    "minQualification": "Diploma",
+    "qualificationRequired": "Diploma (DAE) / Technical Certification",
     "experienceRequired": "2 Years Vehicle Wiring & Battery Repair",
     "jobType": "Full-Time / Government Regular (BPS)",
     "ageLimit": "18 - 28 Years",
@@ -3441,7 +3441,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "government"
     ],
-    "qualification": "Middle / DAE Auto Electrical",
+    "qualification": "Diploma (DAE) / Technical Certification",
     "experience": "2 Years Vehicle Wiring & Battery Repair"
   },
   {
@@ -4038,8 +4038,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Airports & Flight Operations Wing",
     "organization": "Civil Aviation Authority (PCAA Headquarters)",
     "category": "Government Jobs",
-    "minQualification": "Bachelor",
-    "qualificationRequired": "BS Mechanical / HVAC Engineering",
+    "minQualification": "Diploma",
+    "qualificationRequired": "Diploma (DAE) / Technical Certification",
     "experienceRequired": "2 Years Central Airport Chiller Plant Experience",
     "jobType": "Full-Time / Government Regular (BPS)",
     "ageLimit": "22 - 32 Years",
@@ -4057,7 +4057,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "government"
     ],
-    "qualification": "BS Mechanical / HVAC Engineering",
+    "qualification": "Diploma (DAE) / Technical Certification",
     "experience": "2 Years Central Airport Chiller Plant Experience"
   },
   {
@@ -4823,7 +4823,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Primary & Secondary Healthcare Department (Govt Hospitals)",
     "category": "Government Jobs",
     "minQualification": "Bachelor",
-    "qualificationRequired": "MBBS + Valid PMDC / PMC Registration",
+    "qualificationRequired": "Bachelor / BS Degree",
     "experienceRequired": "1 Year House Job Completed",
     "jobType": "Full-Time / Government Regular (BPS)",
     "ageLimit": "22 - 35 Years",
@@ -4841,7 +4841,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "government"
     ],
-    "qualification": "MBBS + Valid PMDC / PMC Registration",
+    "qualification": "Bachelor / BS Degree",
     "experience": "1 Year House Job Completed"
   },
   {
@@ -4879,7 +4879,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Primary & Secondary Healthcare Department (Govt Hospitals)",
     "category": "Government Jobs",
     "minQualification": "Bachelor",
-    "qualificationRequired": "MBBS + Valid PMC License",
+    "qualificationRequired": "Bachelor / BS Degree",
     "experienceRequired": "1 Year General Hospital Clinical Practice",
     "jobType": "Full-Time / Government Regular (BPS)",
     "ageLimit": "22 - 35 Years",
@@ -4897,7 +4897,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "government"
     ],
-    "qualification": "MBBS + Valid PMC License",
+    "qualification": "Bachelor / BS Degree",
     "experience": "1 Year General Hospital Clinical Practice"
   },
   {
@@ -4962,8 +4962,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "District & Tehsil Headquarter Hospitals (DHQ/THQ)",
     "organization": "Primary & Secondary Healthcare Department (Govt Hospitals)",
     "category": "Government Jobs",
-    "minQualification": "Bachelor",
-    "qualificationRequired": "Pharm-D (Doctor of Pharmacy) + Pharmacy Council Reg",
+    "minQualification": "Master",
+    "qualificationRequired": "Master / MA / MSc Degree",
     "experienceRequired": "1 Year Hospital Pharmacy Management",
     "jobType": "Full-Time / Government Regular (BPS)",
     "ageLimit": "21 - 32 Years",
@@ -4981,7 +4981,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "government"
     ],
-    "qualification": "Pharm-D (Doctor of Pharmacy) + Pharmacy Council Reg",
+    "qualification": "Master / MA / MSc Degree",
     "experience": "1 Year Hospital Pharmacy Management"
   },
   {
@@ -5047,7 +5047,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Primary & Secondary Healthcare Department (Govt Hospitals)",
     "category": "Government Jobs",
     "minQualification": "Intermediate",
-    "qualificationRequired": "FA / FSc / ICS + Good Communication Skills",
+    "qualificationRequired": "Intermediate / FA / FSc",
     "experienceRequired": "1 Year Hospital Front Desk / Token Counter",
     "jobType": "Full-Time / Government Regular (BPS)",
     "ageLimit": "18 - 28 Years",
@@ -5065,7 +5065,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "government"
     ],
-    "qualification": "FA / FSc / ICS + Good Communication Skills",
+    "qualification": "Intermediate / FA / FSc",
     "experience": "1 Year Hospital Front Desk / Token Counter"
   },
   {
@@ -5102,8 +5102,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "District & Tehsil Headquarter Hospitals (DHQ/THQ)",
     "organization": "Primary & Secondary Healthcare Department (Govt Hospitals)",
     "category": "Government Jobs",
-    "minQualification": "Primary",
-    "qualificationRequired": "Primary Pass",
+    "minQualification": "No Formal Education",
+    "qualificationRequired": "No Formal Education Required",
     "experienceRequired": "Fresh / Hospital Hygiene Experience",
     "jobType": "Full-Time / Government Regular (BPS)",
     "ageLimit": "18 - 40 Years",
@@ -5121,7 +5121,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "government"
     ],
-    "qualification": "Primary Pass",
+    "qualification": "No Formal Education Required",
     "experience": "Fresh / Hospital Hygiene Experience"
   },
   {
@@ -5466,8 +5466,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Government Infrastructure & Engineering Division",
     "organization": "Communication & Works (C&W) / Public Works Dept (PWD)",
     "category": "Government Jobs",
-    "minQualification": "Intermediate",
-    "qualificationRequired": "DAE HVAC / Mechanical Engineering",
+    "minQualification": "Diploma",
+    "qualificationRequired": "Diploma (DAE) / Technical Certification",
     "experienceRequired": "2 Years Commercial Chillers & Air Handling Units",
     "jobType": "Full-Time / Government Regular (BPS)",
     "ageLimit": "20 - 32 Years",
@@ -5485,7 +5485,7 @@ export const AUDITED_JOBS: JobPosition[] = [
     "campaigns": [
       "government"
     ],
-    "qualification": "DAE HVAC / Mechanical Engineering",
+    "qualification": "Diploma (DAE) / Technical Certification",
     "experience": "2 Years Commercial Chillers & Air Handling Units"
   },
   {
@@ -5607,8 +5607,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Atlas Industrial Manufacturing Ltd.",
     "category": "Factory Worker",
     "minQualification": "Primary",
-    "qualificationRequired": "Primary / Middle Pass",
-    "qualification": "Primary / Middle Pass",
+    "qualificationRequired": "Primary Pass",
+    "qualification": "Primary Pass",
     "experienceRequired": "Fresh / No experience required",
     "experience": "Fresh / No experience required",
     "jobType": "Full-Time / Regular",
@@ -5775,8 +5775,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Horizon Towers Corporate HQ",
     "category": "Office Jobs",
     "minQualification": "Intermediate",
-    "qualificationRequired": "FA / F.Sc / I.Com",
-    "qualification": "FA / F.Sc / I.Com",
+    "qualificationRequired": "Intermediate / FA / FSc",
+    "qualification": "Intermediate / FA / FSc",
     "experienceRequired": "Fresh / 1 Year Experience",
     "experience": "Fresh / 1 Year Experience",
     "jobType": "Full-Time / Regular",
@@ -5803,8 +5803,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Prime Solutions International",
     "category": "Private Jobs",
     "minQualification": "Bachelor",
-    "qualificationRequired": "BS HR / BBA / MBA",
-    "qualification": "BS HR / BBA / MBA",
+    "qualificationRequired": "Bachelor / BS Degree",
+    "qualification": "Bachelor / BS Degree",
     "experienceRequired": "1 - 3 Years HR Recruitment",
     "experience": "1 - 3 Years HR Recruitment",
     "jobType": "Full-Time / Regular",
@@ -5943,8 +5943,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Mindbridge BPO Solutions",
     "category": "Private Jobs",
     "minQualification": "Intermediate",
-    "qualificationRequired": "FA / F.Sc / I.Com / ICS",
-    "qualification": "FA / F.Sc / I.Com / ICS",
+    "qualificationRequired": "Intermediate / FA / FSc",
+    "qualification": "Intermediate / FA / FSc",
     "experienceRequired": "Fresh / 6 Months Call Center",
     "experience": "Fresh / 6 Months Call Center",
     "jobType": "Full-Time / Shift Work",
@@ -6138,9 +6138,9 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Cooling & Refrigeration Services",
     "organization": "Orient Electronics & HVAC",
     "category": "Private Jobs",
-    "minQualification": "Matric",
-    "qualificationRequired": "Matric + HVAC Technical Diploma",
-    "qualification": "Matric + HVAC Technical Diploma",
+    "minQualification": "Diploma",
+    "qualificationRequired": "Diploma (DAE) / Technical Certification",
+    "qualification": "Diploma (DAE) / Technical Certification",
     "experienceRequired": "1 - 2 Years HVAC Repair",
     "experience": "1 - 2 Years HVAC Repair",
     "jobType": "Full-Time / Regular",
@@ -6480,8 +6480,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Khabarwal Media & Production",
     "category": "Sales & Marketing",
     "minQualification": "Intermediate",
-    "qualificationRequired": "FA / F.Sc / Fine Arts Diploma",
-    "qualification": "FA / F.Sc / Fine Arts Diploma",
+    "qualificationRequired": "Intermediate / FA / FSc",
+    "qualification": "Intermediate / FA / FSc",
     "experienceRequired": "1 Year Photoshop & Illustrator",
     "experience": "1 Year Photoshop & Illustrator",
     "jobType": "Freelance / Remote",
@@ -6508,8 +6508,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Getz Pharma Accounts Division",
     "category": "Office Jobs",
     "minQualification": "Bachelor",
-    "qualificationRequired": "B.Com / BBA Finance / M.Com",
-    "qualification": "B.Com / BBA Finance / M.Com",
+    "qualificationRequired": "Bachelor / BS Degree",
+    "qualification": "Bachelor / BS Degree",
     "experienceRequired": "2 - 4 Years Accounting",
     "experience": "2 - 4 Years Accounting",
     "jobType": "Full-Time / Regular",
@@ -6676,8 +6676,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Shaukat Khanum Memorial Hospital",
     "category": "Healthcare",
     "minQualification": "Master",
-    "qualificationRequired": "Pharm-D + Pharmacy Council Registration",
-    "qualification": "Pharm-D + Pharmacy Council Registration",
+    "qualificationRequired": "Master / MA / MSc Degree",
+    "qualification": "Master / MA / MSc Degree",
     "experienceRequired": "1 Year Clinical Pharmacy Practice",
     "experience": "1 Year Clinical Pharmacy Practice",
     "jobType": "Full-Time / Regular",
@@ -6731,9 +6731,9 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Department of Computer Science",
     "organization": "FAST National University (NUCES)",
     "category": "Teaching",
-    "minQualification": "Master",
-    "qualificationRequired": "MS / M.Phil in Computer Science",
-    "qualification": "MS / M.Phil in Computer Science",
+    "minQualification": "MPhil",
+    "qualificationRequired": "MPhil / MS Degree",
+    "qualification": "MPhil / MS Degree",
     "experienceRequired": "Fresh MS Graduates or 1 Year Teaching",
     "experience": "Fresh MS Graduates or 1 Year Teaching",
     "jobType": "Full-Time / Faculty",
@@ -7124,8 +7124,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Systems Ltd Technology Academy",
     "category": "IT & Software",
     "minQualification": "Bachelor",
-    "qualificationRequired": "BSCS / BS SE (Final Year / Fresh Graduates)",
-    "qualification": "BSCS / BS SE (Final Year / Fresh Graduates)",
+    "qualificationRequired": "Bachelor / BS Degree",
+    "qualification": "Bachelor / BS Degree",
     "experienceRequired": "No Prior Work Experience Required",
     "experience": "No Prior Work Experience Required",
     "jobType": "Internship",
@@ -7207,9 +7207,9 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "National Accountability Bureau (NAB)",
     "organization": "NAB Head Office Islamabad",
     "category": "Government Jobs",
-    "minQualification": "Master",
-    "qualificationRequired": "Master / LLB / BS 16-Years Degree",
-    "qualification": "Master / LLB / BS 16-Years Degree",
+    "minQualification": "Bachelor",
+    "qualificationRequired": "Bachelor / BS Degree",
+    "qualification": "Bachelor / BS Degree",
     "experienceRequired": "Fresh Masters or 1 Year Experience",
     "experience": "Fresh Masters or 1 Year Experience",
     "jobType": "Full-Time / Government Regular (BPS)",
@@ -7740,9 +7740,9 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Department of Humanities",
     "organization": "Beaconhouse School System",
     "category": "Teaching",
-    "minQualification": "Master",
-    "qualificationRequired": "MA English / BS English Literature",
-    "qualification": "MA English / BS English Literature",
+    "minQualification": "MPhil",
+    "qualificationRequired": "MPhil / MS Degree",
+    "qualification": "MPhil / MS Degree",
     "experienceRequired": "2 Years O/A-Level English Teaching",
     "experience": "2 Years O/A-Level English Teaching",
     "jobType": "Full-Time / Regular",
@@ -7910,9 +7910,9 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Automotive Workshop",
     "organization": "Toyota Central Motors",
     "category": "Private Jobs",
-    "minQualification": "Matric",
-    "qualificationRequired": "Matric + Auto Electrician Trade Test",
-    "qualification": "Matric + Auto Electrician Trade Test",
+    "minQualification": "Diploma",
+    "qualificationRequired": "Diploma (DAE) / Technical Certification",
+    "qualification": "Diploma (DAE) / Technical Certification",
     "experienceRequired": "2 Years OBD-II Diagnostics",
     "experience": "2 Years OBD-II Diagnostics",
     "jobType": "Full-Time / Regular",
@@ -7995,8 +7995,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Chughtai Medical Center Network",
     "category": "Office Jobs",
     "minQualification": "Intermediate",
-    "qualificationRequired": "FA / F.Sc / I.Com",
-    "qualification": "FA / F.Sc / I.Com",
+    "qualificationRequired": "Intermediate / FA / FSc",
+    "qualification": "Intermediate / FA / FSc",
     "experienceRequired": "Fresh / 1 Year Patient Dealing",
     "experience": "Fresh / 1 Year Patient Dealing",
     "jobType": "Full-Time / Regular",
@@ -8274,9 +8274,9 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Piping & Boiler House",
     "organization": "Fatima Fertilizer Machinery Unit",
     "category": "Factory Worker",
-    "minQualification": "Middle",
-    "qualificationRequired": "Middle / Matric + Pipefitter Trade Certificate",
-    "qualification": "Middle / Matric + Pipefitter Trade Certificate",
+    "minQualification": "Primary",
+    "qualificationRequired": "Primary Pass",
+    "qualification": "Primary Pass",
     "experienceRequired": "1 - 2 Years High Pressure Piping",
     "experience": "1 - 2 Years High Pressure Piping",
     "jobType": "Full-Time / Regular",
@@ -8387,8 +8387,8 @@ export const AUDITED_JOBS: JobPosition[] = [
     "organization": "Roots Millennium Schools",
     "category": "Teaching",
     "minQualification": "Bachelor",
-    "qualificationRequired": "BA / B.Sc + International Montessori Diploma",
-    "qualification": "BA / B.Sc + International Montessori Diploma",
+    "qualificationRequired": "Bachelor / BS Degree",
+    "qualification": "Bachelor / BS Degree",
     "experienceRequired": "1 Year Early Childhood Teaching",
     "experience": "1 Year Early Childhood Teaching",
     "jobType": "Full-Time / Regular",
@@ -8414,9 +8414,9 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Department of Mathematics",
     "organization": "KIPS College System",
     "category": "Teaching",
-    "minQualification": "Master",
-    "qualificationRequired": "M.Sc / BS Mathematics",
-    "qualification": "M.Sc / BS Mathematics",
+    "minQualification": "MPhil",
+    "qualificationRequired": "MPhil / MS Degree",
+    "qualification": "MPhil / MS Degree",
     "experienceRequired": "1 - 2 Years F.Sc Mathematics Teaching",
     "experience": "1 - 2 Years F.Sc Mathematics Teaching",
     "jobType": "Full-Time / Regular",
@@ -8864,9 +8864,9 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Land Surveying & Mapping",
     "organization": "Descon Infrastructure Projects",
     "category": "Office Jobs",
-    "minQualification": "Intermediate",
-    "qualificationRequired": "DAE Civil / Surveyor Certificate",
-    "qualification": "DAE Civil / Surveyor Certificate",
+    "minQualification": "Diploma",
+    "qualificationRequired": "Diploma (DAE) / Technical Certification",
+    "qualification": "Diploma (DAE) / Technical Certification",
     "experienceRequired": "2 Years Total Station Equipment",
     "experience": "2 Years Total Station Equipment",
     "jobType": "Full-Time / Regular",
@@ -9060,9 +9060,9 @@ export const AUDITED_JOBS: JobPosition[] = [
     "department": "Digital Paid Acquisition",
     "organization": "Sapphire Retail Digital Studio",
     "category": "Sales & Marketing",
-    "minQualification": "Bachelor",
-    "qualificationRequired": "BBA / BS Marketing",
-    "qualification": "BBA / BS Marketing",
+    "minQualification": "Intermediate",
+    "qualificationRequired": "Intermediate / FA / FSc",
+    "qualification": "Intermediate / FA / FSc",
     "experienceRequired": "2 Years Meta Ads Manager",
     "experience": "2 Years Meta Ads Manager",
     "jobType": "Freelance / Remote",
