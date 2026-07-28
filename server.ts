@@ -264,19 +264,30 @@ app.get('/api/config', (_req: Request, res: Response) => {
 // Available Job Vacancies
 app.get('/api/jobs', (req: Request, res: Response) => {
   const db = getDB();
-  if (!db.jobs || !Array.isArray(db.jobs) || db.jobs.length < 50) {
+  if (!db.jobs || !Array.isArray(db.jobs) || db.jobs.length < 300) {
     db.jobs = DEFAULT_JOBS;
     saveDB(db);
   }
+  let jobsList = db.jobs.filter(j => j.status === 'active' || j.status === 'published' || !j.status);
   const campaign = req.query.campaign as string;
   if (campaign && campaign !== 'all') {
-    const filtered = db.jobs.filter(j => 
+    const filtered = jobsList.filter(j => 
       (j.campaigns && j.campaigns.includes(campaign)) ||
       (j as any).campaign === campaign
     );
     return res.json(filtered);
   }
-  res.json(db.jobs);
+  res.json(jobsList);
+});
+
+// Single Job Details API
+app.get('/api/jobs/:id', (req: Request, res: Response) => {
+  const db = getDB();
+  const job = db.jobs.find(j => j.id === req.params.id);
+  if (!job || job.status === 'unpublished' || job.status === 'draft') {
+    return res.status(404).json({ error: 'Job position not found or currently unavailable.' });
+  }
+  res.json(job);
 });
 
 // File Upload Endpoint
@@ -554,10 +565,21 @@ app.post('/api/admin/change-password', authMiddleware, (req: AuthenticatedReques
 // Admin Dashboard Stats
 app.get('/api/admin/stats', authMiddleware, (_req: Request, res: Response) => {
   const db = getDB();
-  const apps = db.applications;
+  const apps = db.applications || [];
+  const jobs = db.jobs || [];
 
   const totalUsers = (db.users || []).length;
-  const totalJobs = (db.jobs || []).length;
+  const totalJobs = jobs.length;
+  const publishedJobs = jobs.filter(j => j.status === 'active' || j.status === 'published' || !j.status).length;
+  const unpublishedJobs = jobs.filter(j => j.status === 'unpublished' || j.status === 'draft').length;
+  const govtJobs = jobs.filter(j => j.category === 'Government Jobs').length;
+  const privateJobs = jobs.filter(j => j.category === 'Private Jobs').length;
+  const factoryJobs = jobs.filter(j => j.category === 'Factory Worker').length;
+  const freelancerJobs = jobs.filter(j => j.category === 'Freelancer').length;
+  const otherCategoryJobs = jobs.filter(j =>
+    !['Government Jobs', 'Private Jobs', 'Factory Worker', 'Freelancer'].includes(j.category || '')
+  ).length;
+
   const total = apps.length;
   const pending = apps.filter(a => a.status === 'Payment Verification Pending' || a.status === 'Payment Pending').length;
   const approved = apps.filter(a => a.status === 'Payment Approved' || a.status === 'Submitted Successfully').length;
@@ -567,6 +589,13 @@ app.get('/api/admin/stats', authMiddleware, (_req: Request, res: Response) => {
   res.json({
     totalUsers,
     totalJobs,
+    publishedJobs,
+    unpublishedJobs,
+    govtJobs,
+    privateJobs,
+    factoryJobs,
+    freelancerJobs,
+    otherCategoryJobs,
     totalApplications: total,
     pendingPayments: pending,
     approvedPayments: approved,
@@ -690,12 +719,28 @@ app.put('/api/admin/settings', authMiddleware, (req: Request, res: Response) => 
 });
 
 // Admin Job Management Routes
+app.get('/api/admin/jobs', authMiddleware, (_req: AuthenticatedRequest, res: Response) => {
+  const db = getDB();
+  if (!db.jobs || !Array.isArray(db.jobs)) {
+    db.jobs = DEFAULT_JOBS;
+    saveDB(db);
+  }
+  res.json(db.jobs);
+});
+
 app.post('/api/admin/jobs', authMiddleware, (req: AuthenticatedRequest, res: Response) => {
   const {
     title,
     department,
+    companyName,
+    companyLogo,
+    category,
+    country,
+    employmentType,
     minQualification,
     qualificationRequired,
+    medicalQualification,
+    experienceRequired,
     jobType,
     ageLimit,
     vacancies,
@@ -703,8 +748,14 @@ app.post('/api/admin/jobs', authMiddleware, (req: AuthenticatedRequest, res: Res
     salaryRange,
     deadline,
     description,
+    responsibilities,
+    requirements,
     requiredSkills,
-    status
+    applicationMethod,
+    applicationUrl,
+    postedDate,
+    status,
+    campaigns
   } = req.body;
 
   if (!title || !title.trim()) {
@@ -712,24 +763,61 @@ app.post('/api/admin/jobs', authMiddleware, (req: AuthenticatedRequest, res: Res
   }
 
   const db = getDB();
+
+  // Duplicate Check against Title + Company / Dept + Location / URL
+  const normTitle = title.trim().toLowerCase();
+  const normDept = (companyName || department || '').trim().toLowerCase();
+  const normLoc = (location || '').trim().toLowerCase();
+  const normUrl = (applicationUrl || '').trim().toLowerCase();
+
+  const existingDuplicate = db.jobs.find(j => {
+    const tMatch = j.title.trim().toLowerCase() === normTitle;
+    const dMatch = normDept && (j.department || j.companyName || '').trim().toLowerCase() === normDept;
+    const lMatch = normLoc && (j.location || '').trim().toLowerCase() === normLoc;
+    const uMatch = normUrl && (j.applicationUrl || '').trim().toLowerCase() === normUrl;
+    return (tMatch && dMatch) || (tMatch && lMatch) || (normUrl && uMatch);
+  });
+
+  if (existingDuplicate && !req.body.allowDuplicate) {
+    return res.status(400).json({
+      error: `Duplicate Job Warning: A similar job position titled "${existingDuplicate.title}" at "${existingDuplicate.department || existingDuplicate.companyName || 'General'}" already exists in the database (ID: ${existingDuplicate.id}).`,
+      duplicateId: existingDuplicate.id,
+      isDuplicate: true
+    });
+  }
+
+  const deptVal = companyName || department || 'General';
   const newJob: JobPosition = {
     id: `job-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`,
     title: title.trim(),
-    department: department ? department.trim() : 'General',
+    department: deptVal,
+    companyName: deptVal,
+    companyLogo: companyLogo || '',
+    category: category || 'Government Jobs',
+    country: country || 'Pakistan',
+    employmentType: employmentType || jobType || 'Full-time',
     minQualification: minQualification || 'Primary',
     qualificationRequired: qualificationRequired || `${minQualification || 'Primary'} or Higher`,
-    jobType: jobType || 'Freelance / Remote',
+    medicalQualification: medicalQualification || '',
+    experienceRequired: experienceRequired || 'Fresh / Not Required',
+    jobType: jobType || employmentType || 'Full-time',
     ageLimit: ageLimit || '18 - 45 Years',
     vacancies: Number(vacancies) || 10,
     location: location || 'Remote / Anywhere in Pakistan',
     salaryRange: salaryRange || 'Market Competitive',
     deadline: deadline || '2026-12-31',
     description: description || '',
+    responsibilities: responsibilities || '',
+    requirements: requirements || '',
     requiredSkills: Array.isArray(requiredSkills) ? requiredSkills : (requiredSkills ? requiredSkills.split(',').map((s: string) => s.trim()) : []),
-    status: status || 'active'
+    applicationMethod: applicationMethod || 'online',
+    applicationUrl: applicationUrl || '',
+    postedDate: postedDate || new Date().toISOString().split('T')[0],
+    status: status || 'published',
+    campaigns: Array.isArray(campaigns) ? campaigns : []
   };
 
-  db.jobs.push(newJob);
+  db.jobs.unshift(newJob);
   saveDB(db);
 
   res.json({ message: 'Job vacancy created successfully.', job: newJob });
@@ -745,10 +833,25 @@ app.put('/api/admin/jobs/:id', authMiddleware, (req: AuthenticatedRequest, res: 
   }
 
   const existing = db.jobs[jobIndex];
+
+  // Optional Duplicate Check if title is changed
+  if (req.body.title && req.body.title.trim().toLowerCase() !== existing.title.trim().toLowerCase() && !req.body.allowDuplicate) {
+    const normTitle = req.body.title.trim().toLowerCase();
+    const existingDuplicate = db.jobs.find(j => j.id !== id && j.title.trim().toLowerCase() === normTitle);
+    if (existingDuplicate) {
+      return res.status(400).json({
+        error: `Duplicate Job Warning: Another job position titled "${existingDuplicate.title}" already exists (ID: ${existingDuplicate.id}).`,
+        duplicateId: existingDuplicate.id,
+        isDuplicate: true
+      });
+    }
+  }
+
   const updated: JobPosition = {
     ...existing,
     ...req.body,
     id: existing.id,
+    department: req.body.companyName || req.body.department || existing.department,
     vacancies: req.body.vacancies !== undefined ? Number(req.body.vacancies) : existing.vacancies,
     requiredSkills: Array.isArray(req.body.requiredSkills)
       ? req.body.requiredSkills
@@ -775,6 +878,58 @@ app.delete('/api/admin/jobs/:id', authMiddleware, (req: AuthenticatedRequest, re
 
   saveDB(db);
   res.json({ message: 'Job vacancy deleted successfully.' });
+});
+
+// Bulk Publish Jobs
+app.post('/api/admin/jobs/bulk-publish', authMiddleware, (req: AuthenticatedRequest, res: Response) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Please select at least one job.' });
+  }
+  const db = getDB();
+  let updatedCount = 0;
+  db.jobs = db.jobs.map(j => {
+    if (ids.includes(j.id)) {
+      updatedCount++;
+      return { ...j, status: 'published' };
+    }
+    return j;
+  });
+  saveDB(db);
+  res.json({ message: `${updatedCount} job(s) published successfully.` });
+});
+
+// Bulk Unpublish Jobs
+app.post('/api/admin/jobs/bulk-unpublish', authMiddleware, (req: AuthenticatedRequest, res: Response) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Please select at least one job.' });
+  }
+  const db = getDB();
+  let updatedCount = 0;
+  db.jobs = db.jobs.map(j => {
+    if (ids.includes(j.id)) {
+      updatedCount++;
+      return { ...j, status: 'unpublished' };
+    }
+    return j;
+  });
+  saveDB(db);
+  res.json({ message: `${updatedCount} job(s) unpublished successfully.` });
+});
+
+// Bulk Delete Jobs
+app.post('/api/admin/jobs/bulk-delete', authMiddleware, (req: AuthenticatedRequest, res: Response) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Please select at least one job.' });
+  }
+  const db = getDB();
+  const initialCount = db.jobs.length;
+  db.jobs = db.jobs.filter(j => !ids.includes(j.id));
+  const deletedCount = initialCount - db.jobs.length;
+  saveDB(db);
+  res.json({ message: `${deletedCount} job(s) deleted permanently.` });
 });
 
 

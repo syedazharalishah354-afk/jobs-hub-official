@@ -56,9 +56,24 @@ export function initDB(): DBData {
       parsed.settings.interviewPolicy = DEFAULT_INTERVIEW_POLICY;
       fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
     }
-    if (!parsed.jobs || !Array.isArray(parsed.jobs) || parsed.jobs.length < 180 || parsed.jobs.some(j => !j || !j.id || !j.title || !j.minQualification)) {
+    if (!parsed.jobs || !Array.isArray(parsed.jobs) || parsed.jobs.length < 300 || parsed.jobs.some(j => !j || !j.id || !j.title || !j.minQualification)) {
       parsed.jobs = DEFAULT_JOBS;
       fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
+    } else {
+      // Sync job categories and qualifications from DEFAULT_JOBS for matching IDs
+      const jobMap = new Map(DEFAULT_JOBS.map(j => [j.id, j]));
+      let updated = false;
+      parsed.jobs = parsed.jobs.map(j => {
+        const canonical = jobMap.get(j.id);
+        if (canonical && (canonical.category !== j.category || canonical.minQualification !== j.minQualification)) {
+          updated = true;
+          return { ...j, category: canonical.category, minQualification: canonical.minQualification };
+        }
+        return j;
+      });
+      if (updated) {
+        fs.writeFileSync(DB_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
+      }
     }
     if (!parsed.applications) parsed.applications = [];
 

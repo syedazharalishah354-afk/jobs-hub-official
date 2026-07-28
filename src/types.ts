@@ -59,26 +59,44 @@ export interface JobPosition {
   title: string;
   department: string;
   organization?: string;
+  companyName?: string;
+  companyLogo?: string;
   category?: string;
+  country?: string;
+  employmentType?: string;
   minQualification: string;
   qualificationRequired: string;
+  qualification?: string;
   medicalQualification?: string;
   experienceRequired?: string;
+  experience?: string;
   jobType?: string;
-  ageLimit: string;
+  ageLimit?: string;
   vacancies: number;
   location: string;
   salaryRange: string;
   deadline: string;
   description: string;
+  responsibilities?: string;
+  requirements?: string;
   requiredSkills?: string[];
-  status?: 'active' | 'closed' | 'published' | 'draft';
+  applicationMethod?: string;
+  applicationUrl?: string;
+  postedDate?: string;
+  status?: 'active' | 'closed' | 'published' | 'unpublished' | 'draft';
   campaigns?: string[];
 }
 
 export interface ApplicationStats {
   totalUsers: number;
   totalJobs: number;
+  publishedJobs?: number;
+  unpublishedJobs?: number;
+  govtJobs?: number;
+  privateJobs?: number;
+  factoryJobs?: number;
+  freelancerJobs?: number;
+  otherCategoryJobs?: number;
   totalApplications: number;
   pendingPayments: number;
   approvedPayments: number;

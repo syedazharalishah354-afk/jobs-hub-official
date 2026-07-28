@@ -1,4 +1,6 @@
-[
+import { JobPosition } from '../types.js';
+
+export const AUDITED_JOBS: JobPosition[] = [
   {
     "id": "job-1",
     "title": "Data Entry Operator",
@@ -9109,4 +9111,4 @@
       "freelancers"
     ]
   }
-]
+];

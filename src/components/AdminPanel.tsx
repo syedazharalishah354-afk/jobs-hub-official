@@ -9,9 +9,14 @@ import {
   updateSystemSettings,
   changeAdminPassword,
   fetchJobs,
+  fetchAdminJobs,
   createAdminJob,
   updateAdminJob,
-  deleteAdminJob
+  deleteAdminJob,
+  togglePublishAdminJob,
+  bulkPublishAdminJobs,
+  bulkUnpublishAdminJobs,
+  bulkDeleteAdminJobs
 } from '../services/api.js';
 import {
   Lock,
@@ -42,7 +47,14 @@ import {
   MapPin,
   Share2,
   Copy,
-  Check
+  Check,
+  Building2,
+  Globe,
+  AlertTriangle,
+  ToggleLeft,
+  ToggleRight,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -75,12 +87,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
   const [jobs, setJobs] = useState<JobPosition[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobSearchQuery, setJobSearchQuery] = useState('');
+  const [jobCategoryFilter, setJobCategoryFilter] = useState('all');
   const [jobQualFilter, setJobQualFilter] = useState('all');
+  const [jobTypeFilter, setJobTypeFilter] = useState('all');
+  const [jobStatusFilter, setJobStatusFilter] = useState('all');
   const [jobCampaignFilter, setJobCampaignFilter] = useState('all');
+
+  // Selection & Modals
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<Partial<JobPosition> | null>(null);
   const [savingJob, setSavingJob] = useState(false);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+
+  // Deletion Modals
+  const [deletingJob, setDeletingJob] = useState<JobPosition | null>(null);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [deletingProcess, setDeletingProcess] = useState(false);
+
+  // Duplicate Warning State
+  const [duplicateWarning, setDuplicateWarning] = useState<{ message: string; jobData: Partial<JobPosition> } | null>(null);
 
   // Selected Application for Review Modal
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
@@ -111,9 +137,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
   }, [token, selectedStatusFilter]);
 
   const loadAdminJobs = async () => {
+    if (!token) return;
     setLoadingJobs(true);
     try {
-      const data = await fetchJobs();
+      const data = await fetchAdminJobs(token);
       setJobs(data);
     } catch (err) {
       console.error('Error fetching jobs in admin', err);
@@ -126,60 +153,142 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
     setEditingJob({
       title: '',
       department: 'Digital Support Services',
+      companyName: 'JobsHub Official',
+      companyLogo: '',
+      category: 'Private Jobs',
       minQualification: 'Primary',
       qualificationRequired: 'Primary / Middle or Higher',
-      jobType: 'Freelance / Remote',
+      jobType: 'Full-time',
+      employmentType: 'Full-time',
+      country: 'Pakistan',
       ageLimit: '18 - 40 Years',
       vacancies: 10,
       location: 'Remote / Online',
-      salaryRange: 'PKR 25,000 - 35,000 / month',
+      salaryRange: 'PKR 35,000 - 55,000 / month',
       deadline: '2026-12-31',
       description: '',
-      requiredSkills: [],
-      status: 'active'
+      responsibilities: 'Assist in daily operational, technical, or administrative workflows accurately.',
+      requirements: 'Basic qualification, strong dedication, and adherence to company policies.',
+      requiredSkills: ['Basic Computer', 'Data Entry', 'Communication'],
+      applicationMethod: 'online',
+      applicationUrl: '',
+      postedDate: new Date().toISOString().split('T')[0],
+      status: 'published',
+      campaigns: ['federal-govt', 'pak-navy']
     });
+    setDuplicateWarning(null);
     setIsJobModalOpen(true);
   };
 
   const handleOpenEditJob = (job: JobPosition) => {
     setEditingJob({ ...job });
+    setDuplicateWarning(null);
     setIsJobModalOpen(true);
   };
 
-  const handleSaveJobSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveJobSubmit = async (e?: React.FormEvent, allowDuplicate = false) => {
+    if (e) e.preventDefault();
     if (!token || !editingJob || !editingJob.title) return;
 
     setSavingJob(true);
     try {
+      const payload = { ...editingJob, allowDuplicate };
       if (editingJob.id) {
-        await updateAdminJob(token, editingJob.id, editingJob);
+        await updateAdminJob(token, editingJob.id, payload);
       } else {
-        await createAdminJob(token, editingJob);
+        await createAdminJob(token, payload);
       }
       setIsJobModalOpen(false);
       setEditingJob(null);
+      setDuplicateWarning(null);
       await loadAdminJobs();
+      await loadStats();
       if (onRefreshConfig) onRefreshConfig();
-      alert('Job vacancy saved successfully.');
     } catch (err: any) {
-      alert(err.message || 'Failed to save job');
+      if (err.isDuplicate) {
+        setDuplicateWarning({
+          message: err.message,
+          jobData: editingJob
+        });
+      } else {
+        alert(err.message || 'Failed to save job vacancy');
+      }
     } finally {
       setSavingJob(false);
     }
   };
 
-  const handleDeleteJob = async (jobId: string, jobTitle: string) => {
+  const handleTogglePublishStatus = async (job: JobPosition) => {
     if (!token) return;
-    if (!confirm(`Are you sure you want to delete job "${jobTitle}"?`)) return;
-
+    const isCurrentlyPublished = job.status === 'published' || job.status === 'active' || !job.status;
+    const nextStatus = isCurrentlyPublished ? 'unpublished' : 'published';
     try {
-      await deleteAdminJob(token, jobId);
+      await togglePublishAdminJob(token, job.id, nextStatus);
       await loadAdminJobs();
+      await loadStats();
       if (onRefreshConfig) onRefreshConfig();
-      alert(`Job "${jobTitle}" deleted successfully.`);
+    } catch (err: any) {
+      alert(err.message || 'Failed to update status');
+    }
+  };
+
+  const handleConfirmDeleteSingle = async () => {
+    if (!token || !deletingJob) return;
+    setDeletingProcess(true);
+    try {
+      await deleteAdminJob(token, deletingJob.id);
+      setDeletingJob(null);
+      setSelectedJobIds(prev => prev.filter(id => id !== deletingJob.id));
+      await loadAdminJobs();
+      await loadStats();
+      if (onRefreshConfig) onRefreshConfig();
     } catch (err: any) {
       alert(err.message || 'Failed to delete job');
+    } finally {
+      setDeletingProcess(false);
+    }
+  };
+
+  const handleBulkPublish = async () => {
+    if (!token || selectedJobIds.length === 0) return;
+    try {
+      await bulkPublishAdminJobs(token, selectedJobIds);
+      setSelectedJobIds([]);
+      await loadAdminJobs();
+      await loadStats();
+      if (onRefreshConfig) onRefreshConfig();
+    } catch (err: any) {
+      alert(err.message || 'Failed to bulk publish');
+    }
+  };
+
+  const handleBulkUnpublish = async () => {
+    if (!token || selectedJobIds.length === 0) return;
+    try {
+      await bulkUnpublishAdminJobs(token, selectedJobIds);
+      setSelectedJobIds([]);
+      await loadAdminJobs();
+      await loadStats();
+      if (onRefreshConfig) onRefreshConfig();
+    } catch (err: any) {
+      alert(err.message || 'Failed to bulk unpublish');
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (!token || selectedJobIds.length === 0) return;
+    setDeletingProcess(true);
+    try {
+      await bulkDeleteAdminJobs(token, selectedJobIds);
+      setSelectedJobIds([]);
+      setIsBulkDeleteOpen(false);
+      await loadAdminJobs();
+      await loadStats();
+      if (onRefreshConfig) onRefreshConfig();
+    } catch (err: any) {
+      alert(err.message || 'Failed to bulk delete');
+    } finally {
+      setDeletingProcess(false);
     }
   };
 
@@ -310,9 +419,72 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
     }
   };
 
+  // Filtered Jobs Array
+  const filteredJobs = jobs.filter(j => {
+    const q = jobSearchQuery.toLowerCase().trim();
+    const matchesQuery = !q ||
+      j.title.toLowerCase().includes(q) ||
+      (j.companyName && j.companyName.toLowerCase().includes(q)) ||
+      j.department.toLowerCase().includes(q) ||
+      j.location.toLowerCase().includes(q) ||
+      (j.country && j.country.toLowerCase().includes(q)) ||
+      (j.requiredSkills && j.requiredSkills.some(s => s.toLowerCase().includes(q)));
+
+    if (!matchesQuery) return false;
+
+    if (jobCategoryFilter !== 'all') {
+      if (jobCategoryFilter === 'Government Jobs' && j.category !== 'Government Jobs') return false;
+      if (jobCategoryFilter === 'Private Jobs' && j.category !== 'Private Jobs') return false;
+      if (jobCategoryFilter === 'Factory Worker' && j.category !== 'Factory Worker') return false;
+      if (jobCategoryFilter === 'Freelancer' && j.category !== 'Freelancer') return false;
+      if (jobCategoryFilter === 'Other' && ['Government Jobs', 'Private Jobs', 'Factory Worker', 'Freelancer'].includes(j.category || '')) return false;
+      if (!['Government Jobs', 'Private Jobs', 'Factory Worker', 'Freelancer', 'Other'].includes(jobCategoryFilter) && j.category !== jobCategoryFilter) return false;
+    }
+
+    if (jobQualFilter !== 'all') {
+      if (jobQualFilter === 'Primary' && (j.minQualification !== 'Primary' && j.minQualification !== 'Middle')) return false;
+      if (jobQualFilter === 'Matric' && j.minQualification !== 'Matric') return false;
+      if (jobQualFilter === 'Intermediate' && (j.minQualification === 'Primary' || j.minQualification === 'Middle' || j.minQualification === 'Matric')) return false;
+    }
+
+    if (jobTypeFilter !== 'all') {
+      const typeStr = (j.employmentType || j.jobType || '').toLowerCase();
+      if (!typeStr.includes(jobTypeFilter.toLowerCase())) return false;
+    }
+
+    if (jobStatusFilter !== 'all') {
+      const isPub = j.status === 'published' || j.status === 'active' || !j.status;
+      if (jobStatusFilter === 'published' && !isPub) return false;
+      if (jobStatusFilter === 'unpublished' && isPub) return false;
+    }
+
+    if (jobCampaignFilter !== 'all') {
+      const inCamp = (j.campaigns && j.campaigns.includes(jobCampaignFilter)) || (j as any).campaign === jobCampaignFilter;
+      if (!inCamp) return false;
+    }
+
+    return true;
+  });
+
+  const isAllSelected = filteredJobs.length > 0 && filteredJobs.every(j => selectedJobIds.includes(j.id));
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedJobIds([]);
+    } else {
+      setSelectedJobIds(filteredJobs.map(j => j.id));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedJobIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6 flex flex-col max-h-[92vh]">
+      <div className="bg-white w-full max-w-6xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6 flex flex-col max-h-[92vh]">
         
         {/* Top Header */}
         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
@@ -322,7 +494,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
             </div>
             <div>
               <h3 className="font-bold text-base tracking-tight">JobsHubOfficial Admin Control Portal</h3>
-              <p className="text-xs text-slate-400">Application Management &amp; Payment Verification</p>
+              <p className="text-xs text-slate-400">Real-Time Job Vacancy Management &amp; Application Verification</p>
             </div>
           </div>
 
@@ -472,6 +644,68 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
               {activeTab === 'dashboard' && stats && (
                 <div className="space-y-6">
                   
+                  {/* Real-time Job Database Summary Banner */}
+                  <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-blue-400 font-bold text-xs uppercase tracking-wider">
+                        <Briefcase className="w-4 h-4 text-blue-400" />
+                        <span>Live Database Job Management Counters</span>
+                      </div>
+                      <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 font-extrabold text-[11px] rounded-full border border-emerald-500/30 w-fit">
+                        Real-Time Persistent Sync
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-slate-100">
+                      <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase">Total Jobs</span>
+                        <div className="text-xl font-black text-white mt-1">{jobs.length}</div>
+                      </div>
+                      <div className="bg-emerald-950/60 p-3 rounded-xl border border-emerald-800/50">
+                        <span className="text-[10px] text-emerald-400 block font-bold uppercase">Published</span>
+                        <div className="text-xl font-black text-emerald-300 mt-1">
+                          {jobs.filter(j => j.status === 'published' || j.status === 'active' || !j.status).length}
+                        </div>
+                      </div>
+                      <div className="bg-amber-950/60 p-3 rounded-xl border border-amber-800/50">
+                        <span className="text-[10px] text-amber-400 block font-bold uppercase">Unpublished</span>
+                        <div className="text-xl font-black text-amber-300 mt-1">
+                          {jobs.filter(j => j.status === 'unpublished' || j.status === 'draft').length}
+                        </div>
+                      </div>
+                      <div className="bg-blue-950/60 p-3 rounded-xl border border-blue-800/50">
+                        <span className="text-[10px] text-blue-300 block font-bold uppercase">Government</span>
+                        <div className="text-xl font-black text-blue-200 mt-1">
+                          {jobs.filter(j => j.category === 'Government Jobs').length}
+                        </div>
+                      </div>
+                      <div className="bg-indigo-950/60 p-3 rounded-xl border border-indigo-800/50">
+                        <span className="text-[10px] text-indigo-300 block font-bold uppercase">Private Jobs</span>
+                        <div className="text-xl font-black text-indigo-200 mt-1">
+                          {jobs.filter(j => j.category === 'Private Jobs').length}
+                        </div>
+                      </div>
+                      <div className="bg-teal-950/60 p-3 rounded-xl border border-teal-800/50">
+                        <span className="text-[10px] text-teal-300 block font-bold uppercase">Factory</span>
+                        <div className="text-xl font-black text-teal-200 mt-1">
+                          {jobs.filter(j => j.category === 'Factory Worker').length}
+                        </div>
+                      </div>
+                      <div className="bg-purple-950/60 p-3 rounded-xl border border-purple-800/50">
+                        <span className="text-[10px] text-purple-300 block font-bold uppercase">Freelancer</span>
+                        <div className="text-xl font-black text-purple-200 mt-1">
+                          {jobs.filter(j => j.category === 'Freelancer').length}
+                        </div>
+                      </div>
+                      <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase">Other Sectors</span>
+                        <div className="text-xl font-black text-slate-200 mt-1">
+                          {jobs.filter(j => !['Government Jobs', 'Private Jobs', 'Factory Worker', 'Freelancer'].includes(j.category || '')).length}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     
                     <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
@@ -521,96 +755,62 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                     </div>
                     <button
                       onClick={() => {
-                        setSelectedStatusFilter('Payment Verification Pending');
+                        setSelectedStatusFilter('pending');
                         setActiveTab('applications');
                       }}
-                      className="px-5 py-2.5 bg-white text-blue-900 font-bold text-xs rounded-xl hover:bg-blue-50 transition-colors shrink-0 cursor-pointer"
+                      className="px-5 py-2.5 bg-white text-blue-950 font-bold text-xs rounded-xl shadow-md hover:bg-blue-50 transition-colors cursor-pointer shrink-0"
                     >
                       Review Pending Applications
                     </button>
                   </div>
 
-                  {/* Interview Policy Overview Card on Admin Dashboard */}
-                  {settingsForm && settingsForm.interviewPolicy && (
-                    <div className="bg-white p-5 rounded-2xl border border-blue-100 shadow-2xs space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
-                            <FileText className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-slate-900 text-sm">Active Interview &amp; Test Policy on Portal</h4>
-                            <span className="text-[11px] text-slate-500">Official candidate rules displayed across the portal</span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setActiveTab('settings')}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-bold cursor-pointer"
-                        >
-                          Edit Policy →
-                        </button>
-                      </div>
-                      <div className="bg-slate-50 p-4 rounded-xl text-xs text-slate-700 font-sans leading-relaxed whitespace-pre-line border border-slate-200">
-                        {settingsForm.interviewPolicy}
-                      </div>
-                    </div>
-                  )}
-
                 </div>
               )}
 
-              {/* ----------------- TAB 2: APPLICATION MANAGEMENT TABLE ----------------- */}
+              {/* ----------------- TAB 2: APPLICATIONS MANAGEMENT ----------------- */}
               {activeTab === 'applications' && (
                 <div className="space-y-4">
                   
-                  {/* Search and Filter Controls */}
-                  <div className="flex flex-col sm:flex-row gap-3 justify-between items-center bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                    <div className="relative w-full sm:w-80">
+                  {/* Application Filters */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto text-xs font-semibold">
+                      {['all', 'pending', 'approved', 'rejected'].map((st) => (
+                        <button
+                          key={st}
+                          onClick={() => setSelectedStatusFilter(st)}
+                          className={`px-3 py-1.5 rounded-lg capitalize transition-colors cursor-pointer ${
+                            selectedStatusFilter === st
+                              ? 'bg-blue-600 text-white font-bold shadow-2xs'
+                              : 'bg-white text-slate-700 hover:bg-slate-200/60 border border-slate-200'
+                          }`}
+                        >
+                          {st} Applications
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="relative w-full sm:w-64">
                       <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                       <input
                         type="text"
+                        placeholder="Search CNIC, Roll No, Name..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyUp={(e) => e.key === 'Enter' && loadApplications()}
-                        placeholder="Search name, CNIC, or Ref #..."
-                        className="w-full text-xs pl-9 pr-3 py-2 rounded-lg border border-slate-300 bg-white"
+                        className="w-full text-xs pl-9 pr-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                       />
-                    </div>
-
-                    <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
-                      <span className="text-xs text-slate-500 font-medium">Status:</span>
-                      <select
-                        value={selectedStatusFilter}
-                        onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                        className="text-xs px-3 py-2 rounded-lg border border-slate-300 bg-white font-medium text-slate-800"
-                      >
-                        <option value="all">All Statuses</option>
-                        <option value="Payment Verification Pending">Pending Verification</option>
-                        <option value="Submitted Successfully">Submitted Successfully</option>
-                        <option value="Payment Rejected">Payment Rejected</option>
-                        <option value="Payment Pending">Payment Pending</option>
-                      </select>
-                      <button
-                        onClick={loadApplications}
-                        className="p-2 rounded-lg bg-blue-600 text-white"
-                        title="Reload"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                      </button>
                     </div>
                   </div>
 
-                  {/* Table */}
-                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                  {/* Applications List Table */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                        <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 uppercase text-[10px] font-bold tracking-wider">
                           <tr>
-                            <th className="p-3">Ref #</th>
-                            <th className="p-3">Applicant Name</th>
-                            <th className="p-3">CNIC &amp; Mobile</th>
-                            <th className="p-3">Job Position</th>
-                            <th className="p-3">Method</th>
+                            <th className="p-3">Roll No &amp; Date</th>
+                            <th className="p-3">Candidate Info</th>
+                            <th className="p-3">Applied Job Position</th>
+                            <th className="p-3">Payment Method</th>
                             <th className="p-3">Status</th>
                             <th className="p-3 text-right">Action</th>
                           </tr>
@@ -618,52 +818,65 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                         <tbody className="divide-y divide-slate-100">
                           {loadingApps ? (
                             <tr>
-                              <td colSpan={7} className="text-center py-8 text-slate-500">
-                                <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-1 text-blue-600" />
-                                Loading application records...
+                              <td colSpan={6} className="p-8 text-center text-slate-500">
+                                <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+                                <span>Loading applications list...</span>
                               </td>
                             </tr>
                           ) : applications.length === 0 ? (
                             <tr>
-                              <td colSpan={7} className="text-center py-8 text-slate-500">
-                                No applications match the selected criteria.
+                              <td colSpan={6} className="p-8 text-center text-slate-500 font-medium">
+                                No applications match the selected status filter.
                               </td>
                             </tr>
                           ) : (
                             applications.map((app) => (
                               <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                                <td className="p-3 font-bold text-blue-900">{app.referenceNo}</td>
-                                <td className="p-3 font-medium text-slate-900">
-                                  {app.fullName}
-                                  <span className="block text-[10px] text-slate-400">Father: {app.fatherName}</span>
+                                <td className="p-3 font-mono">
+                                  <div className="font-bold text-blue-900">{app.rollNumber || app.id.slice(0, 8)}</div>
+                                  <div className="text-[10px] text-slate-400">
+                                    {new Date(app.createdAt).toLocaleDateString()}
+                                  </div>
                                 </td>
-                                <td className="p-3 text-slate-700">
-                                  {app.cnic}
-                                  <span className="block text-[10px] text-slate-400">{app.mobile}</span>
-                                </td>
-                                <td className="p-3 font-medium text-slate-800">{app.jobPosition}</td>
-                                <td className="p-3 text-slate-600 font-semibold">{app.paymentMethod || 'N/A'}</td>
                                 <td className="p-3">
-                                  {app.status === 'Submitted Successfully' && (
-                                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Submitted</span>
+                                  <div className="font-bold text-slate-900">{app.candidateName}</div>
+                                  <div className="text-[10px] text-slate-500">CNIC: {app.cnic}</div>
+                                  <div className="text-[10px] text-slate-500">Mobile: {app.mobileNumber}</div>
+                                </td>
+                                <td className="p-3 font-medium text-slate-800">
+                                  {app.jobTitle}
+                                </td>
+                                <td className="p-3">
+                                  <div className="font-bold capitalize text-slate-800">{app.paymentMethod}</div>
+                                  <div className="text-[10px] text-slate-500">TRX: {app.transactionId}</div>
+                                </td>
+                                <td className="p-3">
+                                  {app.paymentStatus === 'approved' && (
+                                    <span className="px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                      Approved
+                                    </span>
                                   )}
-                                  {app.status === 'Payment Verification Pending' && (
-                                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]">Pending Verification</span>
+                                  {app.paymentStatus === 'pending' && (
+                                    <span className="px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-800 font-bold text-[10px] inline-flex items-center gap-1">
+                                      <Clock className="w-3 h-3 text-amber-600" />
+                                      Pending Verification
+                                    </span>
                                   )}
-                                  {app.status === 'Payment Rejected' && (
-                                    <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px]">Rejected</span>
-                                  )}
-                                  {app.status === 'Payment Pending' && (
-                                    <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">Payment Pending</span>
+                                  {app.paymentStatus === 'rejected' && (
+                                    <span className="px-2.5 py-0.5 rounded-md bg-rose-100 text-rose-800 font-bold text-[10px] inline-flex items-center gap-1">
+                                      <XCircle className="w-3 h-3 text-rose-600" />
+                                      Rejected
+                                    </span>
                                   )}
                                 </td>
                                 <td className="p-3 text-right">
                                   <button
                                     onClick={() => setSelectedApp(app)}
-                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-[11px] flex items-center gap-1 ml-auto cursor-pointer"
+                                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-xs rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
                                   >
-                                    <Eye className="w-3 h-3" />
-                                    Review
+                                    <Eye className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>Review</span>
                                   </button>
                                 </td>
                               </tr>
@@ -677,148 +890,281 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                 </div>
               )}
 
-              {/* ----------------- TAB: JOB VACANCIES MANAGEMENT ----------------- */}
+              {/* ----------------- TAB 3: JOB VACANCIES MANAGEMENT ----------------- */}
               {activeTab === 'jobs' && (
-                <div className="space-y-6">
-                  {/* Top Action & Filter Header */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                      <div className="relative w-full sm:w-64">
+                <div className="space-y-4">
+                  
+                  {/* Top Action & Multi-Filter Header */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    
+                    <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                      
+                      {/* Search Bar */}
+                      <div className="relative flex-1">
                         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                         <input
                           type="text"
-                          placeholder="Search job title or skills..."
+                          placeholder="Search title, company, location, or skills..."
                           value={jobSearchQuery}
                           onChange={(e) => setJobSearchQuery(e.target.value)}
-                          className="w-full text-xs pl-9 pr-3 py-2 rounded-lg border border-slate-200 bg-white"
+                          className="w-full text-xs pl-9 pr-3 py-2 rounded-lg border border-slate-300 bg-white font-medium focus:outline-hidden focus:ring-2 focus:ring-blue-600"
                         />
                       </div>
 
-                      <select
-                        value={jobQualFilter}
-                        onChange={(e) => setJobQualFilter(e.target.value)}
-                        className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white font-medium"
+                      {/* Add Job Button */}
+                      <button
+                        onClick={handleOpenAddJob}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
                       >
-                        <option value="all">All Qualifications</option>
-                        <option value="Primary">Primary / Middle</option>
-                        <option value="Matric">Matric</option>
-                        <option value="Intermediate">Intermediate &amp; Above</option>
-                      </select>
-
-                      <select
-                        value={jobCampaignFilter}
-                        onChange={(e) => setJobCampaignFilter(e.target.value)}
-                        className="text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white font-bold text-blue-900"
-                      >
-                        <option value="all">All Ad Campaigns ({jobs.length})</option>
-                        {JOB_CAMPAIGNS.map(c => (
-                          <option key={c.slug} value={c.slug}>
-                            {c.name} ({jobs.filter(j => (j.campaigns && j.campaigns.includes(c.slug)) || (j as any).campaign === c.slug).length})
-                          </option>
-                        ))}
-                      </select>
+                        <Plus className="w-4 h-4" />
+                        <span>Add New Job Vacancy</span>
+                      </button>
                     </div>
 
-                    <button
-                      onClick={handleOpenAddJob}
-                      className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Add New Job Vacancy</span>
-                    </button>
+                    {/* Filter Selects Row */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                      
+                      {/* Category Filter */}
+                      <div>
+                        <select
+                          value={jobCategoryFilter}
+                          onChange={(e) => setJobCategoryFilter(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-bold text-slate-800"
+                        >
+                          <option value="all">All Categories ({jobs.length})</option>
+                          <option value="Government Jobs">Government Jobs ({jobs.filter(j => j.category === 'Government Jobs').length})</option>
+                          <option value="Private Jobs">Private Jobs ({jobs.filter(j => j.category === 'Private Jobs').length})</option>
+                          <option value="Factory Worker">Factory Worker ({jobs.filter(j => j.category === 'Factory Worker').length})</option>
+                          <option value="Freelancer">Freelancer ({jobs.filter(j => j.category === 'Freelancer').length})</option>
+                          <option value="Office Jobs">Office Jobs ({jobs.filter(j => j.category === 'Office Jobs').length})</option>
+                          <option value="Healthcare">Healthcare ({jobs.filter(j => j.category === 'Healthcare').length})</option>
+                          <option value="IT & Software">IT &amp; Software ({jobs.filter(j => j.category === 'IT & Software').length})</option>
+                          <option value="Sales & Marketing">Sales &amp; Marketing ({jobs.filter(j => j.category === 'Sales & Marketing').length})</option>
+                          <option value="Teaching">Teaching ({jobs.filter(j => j.category === 'Teaching').length})</option>
+                        </select>
+                      </div>
+
+                      {/* Status Filter */}
+                      <div>
+                        <select
+                          value={jobStatusFilter}
+                          onChange={(e) => setJobStatusFilter(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-bold text-slate-800"
+                        >
+                          <option value="all">All Statuses</option>
+                          <option value="published">Published Only ({jobs.filter(j => j.status === 'published' || j.status === 'active' || !j.status).length})</option>
+                          <option value="unpublished">Unpublished Only ({jobs.filter(j => j.status === 'unpublished' || j.status === 'draft').length})</option>
+                        </select>
+                      </div>
+
+                      {/* Employment Type Filter */}
+                      <div>
+                        <select
+                          value={jobTypeFilter}
+                          onChange={(e) => setJobTypeFilter(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-medium text-slate-800"
+                        >
+                          <option value="all">All Job Types</option>
+                          <option value="Full-time">Full-Time</option>
+                          <option value="Part-time">Part-Time</option>
+                          <option value="Contract">Contract</option>
+                          <option value="Remote">Remote</option>
+                          <option value="Freelance">Freelance</option>
+                        </select>
+                      </div>
+
+                      {/* Qualification Filter */}
+                      <div>
+                        <select
+                          value={jobQualFilter}
+                          onChange={(e) => setJobQualFilter(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-medium text-slate-800"
+                        >
+                          <option value="all">All Qualifications</option>
+                          <option value="Primary">Primary / Middle</option>
+                          <option value="Matric">Matric</option>
+                          <option value="Intermediate">Intermediate &amp; Above</option>
+                        </select>
+                      </div>
+
+                      {/* Campaign Filter */}
+                      <div>
+                        <select
+                          value={jobCampaignFilter}
+                          onChange={(e) => setJobCampaignFilter(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-bold text-blue-900"
+                        >
+                          <option value="all">All Campaigns</option>
+                          {JOB_CAMPAIGNS.map(c => (
+                            <option key={c.slug} value={c.slug}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                    </div>
                   </div>
 
+                  {/* Bulk Action Bar (Visible when items selected) */}
+                  {selectedJobIds.length > 0 && (
+                    <div className="bg-blue-900 text-white p-3 rounded-xl flex items-center justify-between gap-4 shadow-md animate-fade-in text-xs font-semibold">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>Selected <strong>{selectedJobIds.length}</strong> job(s)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleBulkPublish}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-[11px] cursor-pointer"
+                        >
+                          Publish Selected
+                        </button>
+                        <button
+                          onClick={handleBulkUnpublish}
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold text-[11px] cursor-pointer"
+                        >
+                          Unpublish Selected
+                        </button>
+                        <button
+                          onClick={() => setIsBulkDeleteOpen(true)}
+                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold text-[11px] cursor-pointer flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete Selected
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Jobs List Table */}
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 uppercase text-[10px] font-bold tracking-wider">
                           <tr>
-                            <th className="p-3">Job Title &amp; Dept</th>
-                            <th className="p-3">Min Qualification</th>
-                            <th className="p-3">Type &amp; Vacancies</th>
-                            <th className="p-3">Salary Range</th>
+                            <th className="p-3 w-8">
+                              <input
+                                type="checkbox"
+                                checked={isAllSelected}
+                                onChange={toggleSelectAll}
+                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              />
+                            </th>
+                            <th className="p-3">Job Title &amp; Company</th>
+                            <th className="p-3">Category</th>
+                            <th className="p-3">Location &amp; Country</th>
+                            <th className="p-3">Qualification &amp; Type</th>
+                            <th className="p-3">Salary &amp; Posts</th>
                             <th className="p-3">Status</th>
                             <th className="p-3 text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {jobs
-                            .filter(j => {
-                              const matchQ = jobSearchQuery.toLowerCase();
-                              const matchesSearch =
-                                j.title.toLowerCase().includes(matchQ) ||
-                                j.department.toLowerCase().includes(matchQ) ||
-                                (j.requiredSkills && j.requiredSkills.some(s => s.toLowerCase().includes(matchQ)));
+                          {loadingJobs ? (
+                            <tr>
+                              <td colSpan={8} className="p-8 text-center text-slate-500">
+                                <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+                                <span>Loading job positions...</span>
+                              </td>
+                            </tr>
+                          ) : filteredJobs.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="p-8 text-center text-slate-500 font-medium">
+                                No job vacancies found matching current filters.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredJobs.map(job => {
+                              const isPublished = job.status === 'published' || job.status === 'active' || !job.status;
+                              const isChecked = selectedJobIds.includes(job.id);
 
-                              if (!matchesSearch) return false;
-                              if (jobQualFilter === 'Primary' && (j.minQualification !== 'Primary' && j.minQualification !== 'Middle')) return false;
-                              if (jobQualFilter === 'Matric' && j.minQualification !== 'Matric') return false;
-                              if (jobQualFilter === 'Intermediate' && (j.minQualification === 'Primary' || j.minQualification === 'Middle' || j.minQualification === 'Matric')) return false;
-
-                              if (jobCampaignFilter !== 'all') {
-                                const inCamp = (j.campaigns && j.campaigns.includes(jobCampaignFilter)) || (j as any).campaign === jobCampaignFilter;
-                                if (!inCamp) return false;
-                              }
-                              return true;
+                              return (
+                                <tr key={job.id} className={`hover:bg-slate-50 transition-colors ${isChecked ? 'bg-blue-50/40' : ''}`}>
+                                  <td className="p-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleSelectOne(job.id)}
+                                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                  </td>
+                                  <td className="p-3">
+                                    <div className="flex items-center gap-2">
+                                      {job.companyLogo ? (
+                                        <img src={job.companyLogo} alt={job.companyName || job.department} className="w-7 h-7 rounded object-cover border border-slate-200" />
+                                      ) : (
+                                        <div className="w-7 h-7 rounded bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-xs border border-blue-200 shrink-0">
+                                          {(job.companyName || job.department || 'J')[0]}
+                                        </div>
+                                      )}
+                                      <div>
+                                        <div className="font-bold text-slate-900">{job.title}</div>
+                                        <div className="text-[10px] text-slate-500">{job.companyName || job.department}</div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="p-3">
+                                    <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-indigo-50 text-indigo-900 border border-indigo-200 inline-block">
+                                      {job.category || 'General Jobs'}
+                                    </span>
+                                  </td>
+                                  <td className="p-3">
+                                    <div className="text-slate-800 font-medium">{job.location}</div>
+                                    <div className="text-[10px] text-slate-400">{job.country || 'Pakistan'}</div>
+                                  </td>
+                                  <td className="p-3">
+                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-900 font-bold rounded text-[10px] border border-blue-100">
+                                      {job.minQualification}
+                                    </span>
+                                    <div className="text-[10px] text-slate-500 mt-0.5">{job.employmentType || job.jobType}</div>
+                                  </td>
+                                  <td className="p-3">
+                                    <div className="font-bold text-emerald-800 text-[11px]">{job.salaryRange}</div>
+                                    <div className="text-[10px] text-slate-500">{job.vacancies} Posts</div>
+                                  </td>
+                                  <td className="p-3">
+                                    <button
+                                      onClick={() => handleTogglePublishStatus(job)}
+                                      className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold flex items-center gap-1 cursor-pointer transition-colors ${
+                                        isPublished
+                                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300 hover:bg-emerald-200'
+                                          : 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+                                      }`}
+                                    >
+                                      {isPublished ? (
+                                        <>
+                                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                          <span>Published</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <XCircle className="w-3 h-3 text-amber-600" />
+                                          <span>Unpublished</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </td>
+                                  <td className="p-3 text-right space-x-1 whitespace-nowrap">
+                                    <button
+                                      onClick={() => handleOpenEditJob(job)}
+                                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded text-[11px] inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Edit3 className="w-3 h-3 text-blue-600" />
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => setDeletingJob(job)}
+                                      className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded text-[11px] inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3 h-3 text-rose-600" />
+                                      Delete
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
                             })
-                            .map(job => (
-                              <tr key={job.id} className="hover:bg-slate-50 transition-colors">
-                                <td className="p-3">
-                                  <div className="font-bold text-slate-900">{job.title}</div>
-                                  <div className="text-[10px] text-slate-500 mb-1">{job.department}</div>
-                                  {job.category && (
-                                    <div className="text-[10px] font-extrabold text-indigo-800 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 inline-block mb-1">
-                                      Category: {job.category}
-                                    </div>
-                                  )}
-                                  {job.campaigns && job.campaigns.length > 0 && (
-                                    <div className="flex flex-wrap gap-1">
-                                      {job.campaigns.map(c => (
-                                        <span key={c} className="text-[9px] px-1.5 py-0.2 bg-blue-50 text-blue-800 rounded border border-blue-200 font-semibold uppercase">
-                                          {c}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="p-3">
-                                  <span className="px-2.5 py-1 bg-blue-50 text-blue-900 font-bold rounded-md border border-blue-100 text-[11px]">
-                                    {job.minQualification}
-                                  </span>
-                                </td>
-                                <td className="p-3">
-                                  <div className="text-slate-800 font-medium">{job.jobType}</div>
-                                  <div className="text-[10px] text-emerald-700 font-bold">{job.vacancies} Posts</div>
-                                </td>
-                                <td className="p-3 font-semibold text-slate-700">
-                                  {job.salaryRange}
-                                </td>
-                                <td className="p-3">
-                                  {job.status === 'active' ? (
-                                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">Active</span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-bold text-[10px]">Closed</span>
-                                  )}
-                                </td>
-                                <td className="p-3 text-right space-x-1 whitespace-nowrap">
-                                  <button
-                                    onClick={() => handleOpenEditJob(job)}
-                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded text-[11px] inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Edit3 className="w-3 h-3 text-blue-600" />
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteJob(job.id, job.title)}
-                                    className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded text-[11px] inline-flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3 h-3 text-rose-600" />
-                                    Delete
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -826,83 +1172,64 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                 </div>
               )}
 
-              {/* ----------------- TAB: AD CAMPAIGNS MANAGEMENT ----------------- */}
+              {/* ----------------- TAB 4: AD CAMPAIGNS MANAGEMENT ----------------- */}
               {activeTab === 'campaigns' && (
                 <div className="space-y-6">
-                  <div className="bg-gradient-to-r from-blue-900 to-slate-900 text-white p-6 rounded-2xl shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 text-blue-300 text-xs font-bold uppercase tracking-wider">
-                      <Share2 className="w-4 h-4" />
-                      <span>5-Page Job Campaign / Ad-Based Filtering System</span>
-                    </div>
-                    <h3 className="text-xl font-black">Targeted Job Campaign URLs</h3>
-                    <p className="text-slate-300 text-xs leading-relaxed max-w-3xl">
-                      Each job campaign has its own unique URL for social media ads (Facebook, TikTok, WhatsApp, Google Ads). Visitors coming from an ad link will only see jobs assigned to that campaign. As an administrator, you can manage assigned campaigns for any job vacancy.
+                  <div className="bg-blue-900 text-white p-6 rounded-2xl space-y-2">
+                    <h4 className="text-base font-extrabold flex items-center gap-2">
+                      <Share2 className="w-5 h-5 text-blue-300" />
+                      Multi-Campaign Landing Page URLs
+                    </h4>
+                    <p className="text-xs text-blue-200 leading-relaxed max-w-3xl">
+                      Each ad campaign has a unique landing page URL with custom branding, government logos, and relevant job filters tailored for social media advertising (TikTok, Facebook, Instagram, Google Ads).
                     </p>
                   </div>
 
-                  {/* Campaign Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {JOB_CAMPAIGNS.map(camp => {
-                      const assignedJobsCount = jobs.filter(j => 
-                        (j.campaigns && j.campaigns.includes(camp.slug)) || (j as any).campaign === camp.slug
-                      ).length;
-                      const campUrl = `${window.location.origin}${getCampaignUrl(camp.slug)}`;
+                      const campUrl = getCampaignUrl(camp.slug);
+                      const isCopied = copiedSlug === camp.slug;
+                      const count = jobs.filter(j => (j.campaigns && j.campaigns.includes(camp.slug)) || (j as any).campaign === camp.slug).length;
+
+                      const handleCopy = () => {
+                        navigator.clipboard.writeText(campUrl);
+                        setCopiedSlug(camp.slug);
+                        setTimeout(() => setCopiedSlug(null), 2000);
+                      };
 
                       return (
-                        <div key={camp.slug} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-2xl">{camp.icon}</span>
-                              <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-900 font-extrabold text-[11px] border border-blue-200">
-                                {assignedJobsCount} Jobs Assigned
+                        <div key={camp.slug} className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs space-y-3 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="text-lg">{camp.icon}</span>
+                              <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 font-extrabold text-[10px] border border-blue-200">
+                                {count} Active Jobs
                               </span>
                             </div>
-
-                            <h4 className="text-base font-black text-slate-900">{camp.name}</h4>
-                            <p className="text-xs text-slate-600 line-clamp-2">{camp.description}</p>
+                            <h5 className="font-extrabold text-slate-900 text-sm">{camp.name}</h5>
+                            <p className="text-xs text-slate-500 mt-1">{camp.description}</p>
                           </div>
 
-                          <div className="pt-3 border-t border-slate-100 space-y-2.5">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Campaign Public URL</div>
-                            <div className="flex items-center gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 truncate">
-                              <span className="truncate flex-1">{getCampaignUrl(camp.slug)}</span>
+                          <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <span className="text-[11px] font-mono text-slate-600 truncate max-w-[220px]">
+                              {campUrl}
+                            </span>
+                            <div className="flex items-center gap-1 shrink-0">
                               <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(campUrl);
-                                  setCopiedSlug(camp.slug);
-                                  setTimeout(() => setCopiedSlug(null), 2000);
-                                }}
-                                className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer shrink-0"
-                                title="Copy full URL"
+                                onClick={handleCopy}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-lg flex items-center gap-1 cursor-pointer"
                               >
-                                {copiedSlug === camp.slug ? (
-                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                ) : (
-                                  <Copy className="w-3.5 h-3.5 text-slate-600" />
-                                )}
+                                {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
+                                <span>{isCopied ? 'Copied!' : 'Copy Link'}</span>
                               </button>
-                            </div>
-
-                            <div className="flex items-center gap-2 pt-1">
                               <a
-                                href={getCampaignUrl(camp.slug)}
+                                href={campUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold text-center flex items-center justify-center gap-1.5 transition-colors"
+                                className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg cursor-pointer"
                               >
-                                <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
-                                <span>Preview Page</span>
+                                <ExternalLink className="w-4 h-4" />
                               </a>
-
-                              <button
-                                onClick={() => {
-                                  setJobCampaignFilter(camp.slug);
-                                  setActiveTab('jobs');
-                                }}
-                                className="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold text-center transition-colors cursor-pointer"
-                              >
-                                View {assignedJobsCount} Jobs &rarr;
-                              </button>
                             </div>
                           </div>
                         </div>
@@ -912,403 +1239,458 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                 </div>
               )}
 
-              {/* ----------------- TAB 3: SETTINGS FORM ----------------- */}
+              {/* ----------------- TAB 5: PAYMENT & FEE SETUP ----------------- */}
               {activeTab === 'settings' && settingsForm && (
-                <form onSubmit={handleSaveSettings} className="space-y-6 max-w-2xl text-xs">
+                <div className="space-y-6 max-w-2xl mx-auto">
                   
                   {settingsSuccess && (
-                    <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center gap-2">
+                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>{settingsSuccess}</span>
                     </div>
                   )}
 
-                  {/* Application Fee */}
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-                    <label className="block font-bold text-slate-900 text-sm">Application Fee Amount (PKR)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={settingsForm.applicationFee}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, applicationFee: Number(e.target.value) })}
-                      className="w-full text-xs px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white"
-                    />
-                  </div>
-
-                  {/* JazzCash Configuration */}
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                    <h4 className="font-bold text-blue-900 text-sm">JazzCash Payment Details</h4>
-                    
+                  <form onSubmit={handleSaveSettings} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-6">
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Account Title</label>
-                      <input
-                        type="text"
-                        value={settingsForm.jazzcash.accountTitle}
-                        onChange={(e) => setSettingsForm({
-                          ...settingsForm,
-                          jazzcash: { ...settingsForm.jazzcash, accountTitle: e.target.value }
-                        })}
-                        className="w-full text-xs px-3.5 py-2 rounded-lg border border-slate-300 bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Account Number</label>
-                      <input
-                        type="text"
-                        value={settingsForm.jazzcash.accountNumber}
-                        onChange={(e) => setSettingsForm({
-                          ...settingsForm,
-                          jazzcash: { ...settingsForm.jazzcash, accountNumber: e.target.value }
-                        })}
-                        className="w-full text-xs px-3.5 py-2 rounded-lg border border-slate-300 bg-white font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Payment Instructions</label>
-                      <textarea
-                        rows={2}
-                        value={settingsForm.jazzcash.instructions}
-                        onChange={(e) => setSettingsForm({
-                          ...settingsForm,
-                          jazzcash: { ...settingsForm.jazzcash, instructions: e.target.value }
-                        })}
-                        className="w-full text-xs p-3 rounded-lg border border-slate-300 bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Easypaisa Configuration */}
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                    <h4 className="font-bold text-emerald-900 text-sm">Easypaisa Payment Details</h4>
-                    
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Account Title</label>
-                      <input
-                        type="text"
-                        value={settingsForm.easypaisa.accountTitle}
-                        onChange={(e) => setSettingsForm({
-                          ...settingsForm,
-                          easypaisa: { ...settingsForm.easypaisa, accountTitle: e.target.value }
-                        })}
-                        className="w-full text-xs px-3.5 py-2 rounded-lg border border-slate-300 bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Account Number</label>
-                      <input
-                        type="text"
-                        value={settingsForm.easypaisa.accountNumber}
-                        onChange={(e) => setSettingsForm({
-                          ...settingsForm,
-                          easypaisa: { ...settingsForm.easypaisa, accountNumber: e.target.value }
-                        })}
-                        className="w-full text-xs px-3.5 py-2 rounded-lg border border-slate-300 bg-white font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Payment Instructions</label>
-                      <textarea
-                        rows={2}
-                        value={settingsForm.easypaisa.instructions}
-                        onChange={(e) => setSettingsForm({
-                          ...settingsForm,
-                          easypaisa: { ...settingsForm.easypaisa, instructions: e.target.value }
-                        })}
-                        className="w-full text-xs p-3 rounded-lg border border-slate-300 bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Interview & Screening Test Policy Settings */}
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-600" />
-                        Interview &amp; Screening Test Policy
+                      <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-emerald-600" />
+                        Application Fee Settings
                       </h4>
-                      <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full">
-                        Displayed on Dashboard
-                      </span>
+                      <p className="text-xs text-slate-500 mt-1">Configure the fee amount charged for all online registration slips.</p>
+                      
+                      <div className="mt-3">
+                        <label className="block font-bold text-slate-700 text-xs mb-1">Application Fee (PKR)</label>
+                        <input
+                          type="number"
+                          required
+                          min={0}
+                          value={settingsForm.applicationFee}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, applicationFee: Number(e.target.value) })}
+                          className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-900 focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-normal">
-                      Configure the official rules, required documents, reporting instructions, and venue guidelines displayed to candidates on the dashboard and printable pass slips.
-                    </p>
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Policy Terms &amp; Instructions</label>
-                      <textarea
-                        rows={6}
-                        value={settingsForm.interviewPolicy || ''}
-                        onChange={(e) => setSettingsForm({
-                          ...settingsForm,
-                          interviewPolicy: e.target.value
-                        })}
-                        placeholder="Enter official interview policy..."
-                        className="w-full text-xs p-3 rounded-lg border border-slate-300 bg-white leading-relaxed font-mono"
-                      />
+
+                    <div className="pt-4 border-t border-slate-100 space-y-4">
+                      <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                        <Upload className="w-4 h-4 text-blue-600" />
+                        JazzCash Merchant Account
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Account Title</label>
+                          <input
+                            type="text"
+                            required
+                            value={settingsForm.jazzcash.accountTitle}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              jazzcash: { ...settingsForm.jazzcash, accountTitle: e.target.value }
+                            })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Account Number</label>
+                          <input
+                            type="text"
+                            required
+                            value={settingsForm.jazzcash.accountNumber}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              jazzcash: { ...settingsForm.jazzcash, accountNumber: e.target.value }
+                            })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  <button
-                    type="submit"
-                    disabled={savingSettings}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
-                  >
-                    {savingSettings && <RefreshCw className="w-4 h-4 animate-spin" />}
-                    <span>Save System Configuration &amp; Policy</span>
-                  </button>
+                    <div className="pt-4 border-t border-slate-100 space-y-4">
+                      <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                        <Upload className="w-4 h-4 text-emerald-600" />
+                        Easypaisa Merchant Account
+                      </h4>
 
-                </form>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Account Title</label>
+                          <input
+                            type="text"
+                            required
+                            value={settingsForm.easypaisa.accountTitle}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              easypaisa: { ...settingsForm.easypaisa, accountTitle: e.target.value }
+                            })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Account Number</label>
+                          <input
+                            type="text"
+                            required
+                            value={settingsForm.easypaisa.accountNumber}
+                            onChange={(e) => setSettingsForm({
+                              ...settingsForm,
+                              easypaisa: { ...settingsForm.easypaisa, accountNumber: e.target.value }
+                            })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={savingSettings}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {savingSettings ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      <span>Save Payment Configurations</span>
+                    </button>
+                  </form>
+
+                </div>
               )}
 
-              {/* ----------------- TAB 4: SECURITY / CHANGE PASSWORD ----------------- */}
+              {/* ----------------- TAB 6: SECURITY SETTINGS ----------------- */}
               {activeTab === 'security' && (
-                <form onSubmit={handleChangePass} className="space-y-4 max-w-md text-xs">
-                  <h4 className="font-bold text-slate-900 text-sm">Update Admin Account Password</h4>
-
+                <div className="space-y-6 max-w-md mx-auto">
+                  
                   {passSuccess && (
-                    <div className="p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200">
-                      {passSuccess}
+                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{passSuccess}</span>
                     </div>
                   )}
 
                   {passError && (
-                    <div className="p-3 rounded-xl bg-rose-50 text-rose-900 border border-rose-200">
-                      {passError}
+                    <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{passError}</span>
                     </div>
                   )}
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Current Password</label>
-                    <input
-                      type="password"
-                      required
-                      value={currentPass}
-                      onChange={(e) => setCurrentPass(e.target.value)}
-                      className="w-full text-xs px-3.5 py-2.5 rounded-lg border border-slate-300"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">New Password</label>
-                    <input
-                      type="password"
-                      required
-                      value={newPass}
-                      onChange={(e) => setNewPass(e.target.value)}
-                      placeholder="Minimum 6 characters"
-                      className="w-full text-xs px-3.5 py-2.5 rounded-lg border border-slate-300"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={changingPass}
-                    className="px-6 py-2.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 cursor-pointer"
-                  >
-                    {changingPass ? 'Updating Password...' : 'Update Password'}
-                  </button>
-                </form>
-              )}
-
-            </div>
-
-          </div>
-        )}
-
-        {/* ================= APPLICATION REVIEW DETAIL MODAL ================= */}
-        {selectedApp && (
-          <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-            <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden my-6 flex flex-col max-h-[90vh]">
-              
-              <div className="bg-blue-900 text-white px-5 py-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-200 block">Reviewing Application</span>
-                  <h3 className="text-base font-bold">REF: {selectedApp.referenceNo}</h3>
-                </div>
-                <button
-                  onClick={() => setSelectedApp(null)}
-                  className="p-1 rounded text-blue-200 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="p-6 overflow-y-auto space-y-6 text-xs text-slate-800">
-                
-                {/* Dossier Details */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Applicant Name</span>
-                    <strong className="text-slate-900 font-bold">{selectedApp.fullName}</strong>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Father's Name</span>
-                    <strong className="text-slate-900 font-bold">{selectedApp.fatherName}</strong>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">CNIC Number</span>
-                    <strong className="text-slate-900 font-bold">{selectedApp.cnic}</strong>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Email Address</span>
-                    <span>{selectedApp.email}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Mobile Number</span>
-                    <span>{selectedApp.mobile}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Qualification</span>
-                    <span>{selectedApp.qualification}</span>
-                  </div>
-
-                  <div className="col-span-2">
-                    <span className="text-slate-400 block text-[10px]">Complete Address</span>
-                    <span>{selectedApp.address} ({selectedApp.postalCode})</span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Applied Position</span>
-                    <strong className="text-blue-900 font-bold">{selectedApp.jobPosition}</strong>
-                  </div>
-                </div>
-
-                {/* Document Images */}
-                <div>
-                  <h4 className="font-bold text-slate-900 text-xs mb-3">Uploaded Verification Documents</h4>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* CNIC Front */}
-                    <div className="border border-slate-200 p-2 rounded-xl bg-slate-50 text-center">
-                      <span className="text-[10px] font-bold text-slate-600 block mb-1">CNIC Front Picture</span>
-                      {selectedApp.cnicFrontUrl ? (
-                        <img
-                          src={selectedApp.cnicFrontUrl}
-                          alt="CNIC Front"
-                          onClick={() => setZoomImage(selectedApp.cnicFrontUrl)}
-                          className="h-28 w-full object-cover rounded border cursor-pointer hover:opacity-90"
-                        />
-                      ) : (
-                        <p className="text-slate-400 text-[10px] py-8">Not Provided</p>
-                      )}
-                    </div>
-
-                    {/* CNIC Back */}
-                    <div className="border border-slate-200 p-2 rounded-xl bg-slate-50 text-center">
-                      <span className="text-[10px] font-bold text-slate-600 block mb-1">CNIC Back Picture</span>
-                      {selectedApp.cnicBackUrl ? (
-                        <img
-                          src={selectedApp.cnicBackUrl}
-                          alt="CNIC Back"
-                          onClick={() => setZoomImage(selectedApp.cnicBackUrl)}
-                          className="h-28 w-full object-cover rounded border cursor-pointer hover:opacity-90"
-                        />
-                      ) : (
-                        <p className="text-slate-400 text-[10px] py-8">Not Provided</p>
-                      )}
-                    </div>
-
-                    {/* Payment Screenshot */}
-                    <div className="border border-blue-200 p-2 rounded-xl bg-blue-50/50 text-center">
-                      <span className="text-[10px] font-bold text-blue-900 block mb-1">Payment Screenshot Proof</span>
-                      {selectedApp.paymentScreenshotUrl ? (
-                        <img
-                          src={selectedApp.paymentScreenshotUrl}
-                          alt="Payment Proof"
-                          onClick={() => setZoomImage(selectedApp.paymentScreenshotUrl)}
-                          className="h-28 w-full object-cover rounded border border-blue-300 cursor-pointer hover:opacity-90"
-                        />
-                      ) : (
-                        <p className="text-slate-400 text-[10px] py-8">No Proof Uploaded</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Verification Action Box */}
-                <div className="bg-slate-100 p-4 rounded-xl border border-slate-300 space-y-3">
-                  <h4 className="font-bold text-slate-900 text-xs">Admin Verification Actions</h4>
-                  
-                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <form onSubmit={handleChangePass} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4 text-xs">
+                    <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                      <Key className="w-4 h-4 text-blue-600" />
+                      Change Admin Credentials
+                    </h4>
                     
-                    <button
-                      onClick={() => handleVerify('approve')}
-                      disabled={verifying}
-                      className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Approve Payment &amp; Mark Submitted</span>
-                    </button>
-
-                    <div className="flex-1 w-full space-y-1">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Current Password</label>
                       <input
-                        type="text"
-                        value={rejectionReason}
-                        onChange={(e) => setRejectionReason(e.target.value)}
-                        placeholder="Rejection reason (e.g. Blurry image, Fee incomplete)"
-                        className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 bg-white"
+                        type="password"
+                        required
+                        value={currentPass}
+                        onChange={(e) => setCurrentPass(e.target.value)}
+                        placeholder="Enter existing password"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">New Admin Password</label>
+                      <input
+                        type="password"
+                        required
+                        min={6}
+                        value={newPass}
+                        onChange={(e) => setNewPass(e.target.value)}
+                        placeholder="Enter new strong password"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600"
                       />
                     </div>
 
                     <button
-                      onClick={() => handleVerify('reject')}
-                      disabled={verifying}
-                      className="w-full sm:w-auto px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-xs shrink-0"
+                      type="submit"
+                      disabled={changingPass}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <XCircle className="w-4 h-4" />
-                      <span>Reject Payment</span>
+                      {changingPass ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                      <span>Update Password</span>
                     </button>
+                  </form>
 
-                  </div>
                 </div>
-
-              </div>
+              )}
 
             </div>
           </div>
         )}
 
-        {/* Zoom Image Viewer Modal */}
-        {zoomImage && (
-          <div
-            onClick={() => setZoomImage(null)}
-            className="fixed inset-0 z-70 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
-          >
-            <img src={zoomImage} alt="Zoomed Document" className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg" />
-          </div>
-        )}
-
-        {/* Job Vacancy Add / Edit Modal */}
-        {isJobModalOpen && editingJob && (
-          <div className="fixed inset-0 z-60 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6 flex flex-col max-h-[90vh]">
-              <div className="bg-blue-950 text-white p-5 flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-extrabold">
-                    {editingJob.id ? 'Edit Job Vacancy' : 'Create New Job Vacancy'}
-                  </h3>
-                  <p className="text-xs text-blue-200">
-                    Configure qualification access rules and vacancy specifications
-                  </p>
+        {/* ================= REVIEW APPLICATION MODAL ================= */}
+        {selectedApp && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4 overflow-y-auto">
+            <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+              
+              <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-400" />
+                  <h4 className="font-bold text-sm">Application Review - #{selectedApp.rollNumber || selectedApp.id.slice(0, 8)}</h4>
                 </div>
                 <button
-                  onClick={() => setIsJobModalOpen(false)}
-                  className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-blue-900 cursor-pointer"
+                  onClick={() => setSelectedApp(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleSaveJobSubmit} className="p-6 overflow-y-auto space-y-4 text-xs">
+              <div className="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
+                
+                <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div>
+                    <span className="text-slate-400 block font-bold text-[10px] uppercase">Candidate Name</span>
+                    <span className="font-extrabold text-slate-900 text-sm">{selectedApp.candidateName}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-bold text-[10px] uppercase">Father Name</span>
+                    <span className="font-bold text-slate-800">{selectedApp.fatherName}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-bold text-[10px] uppercase">CNIC Number</span>
+                    <span className="font-mono font-bold text-blue-900">{selectedApp.cnic}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-bold text-[10px] uppercase">Mobile Number</span>
+                    <span className="font-mono font-bold text-slate-800">{selectedApp.mobileNumber}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-slate-400 block font-bold text-[10px] uppercase">Applied Job Position</span>
+                    <span className="font-extrabold text-blue-900 text-xs">{selectedApp.jobTitle}</span>
+                  </div>
+                </div>
+
+                {/* Payment Proof Screenshot Section */}
+                <div className="space-y-2">
+                  <span className="font-bold text-slate-800 block">Payment Screenshot Proof</span>
+                  {selectedApp.paymentScreenshot ? (
+                    <div className="relative group rounded-xl overflow-hidden border border-slate-300 max-h-64 flex items-center justify-center bg-slate-900">
+                      <img
+                        src={selectedApp.paymentScreenshot}
+                        alt="Payment Proof"
+                        className="max-h-64 object-contain cursor-pointer"
+                        onClick={() => setZoomImage(selectedApp.paymentScreenshot!)}
+                      />
+                      <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button
+                          onClick={() => setZoomImage(selectedApp.paymentScreenshot!)}
+                          className="px-3 py-1.5 bg-white text-slate-900 font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye className="w-4 h-4 text-blue-600" />
+                          <span>Click to Zoom</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-slate-100 text-slate-500 font-medium text-center">
+                      No screenshot uploaded for this application.
+                    </div>
+                  )}
+                </div>
+
+                {/* Verification Actions */}
+                {selectedApp.paymentStatus === 'pending' && (
+                  <div className="pt-4 border-t border-slate-200 space-y-3">
+                    <span className="font-bold text-slate-900 block">Verify &amp; Update Payment Status</span>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleVerify('approve')}
+                        disabled={verifying}
+                        className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        {verifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                        <span>Approve Payment</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 pt-2">
+                      <input
+                        type="text"
+                        placeholder="Reason for rejection (required if rejecting)..."
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        className="w-full text-xs px-3 py-2 rounded-xl border border-slate-300"
+                      />
+                      <button
+                        onClick={() => handleVerify('reject')}
+                        disabled={verifying}
+                        className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        {verifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                        <span>Reject Application</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= SINGLE JOB DELETION CONFIRMATION MODAL ================= */}
+        {deletingJob && (
+          <div className="fixed inset-0 z-70 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-rose-200 p-6 space-y-4">
+              <div className="flex items-center gap-3 text-rose-600">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-rose-600" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-slate-900 text-base">Delete Job Vacancy?</h4>
+                  <p className="text-xs text-slate-500">This action cannot be undone.</p>
+                </div>
+              </div>
+
+              <div className="bg-rose-50/70 p-3.5 rounded-xl border border-rose-200 text-xs space-y-1">
+                <div className="font-extrabold text-slate-900">{deletingJob.title}</div>
+                <div className="text-slate-600 font-medium">{deletingJob.companyName || deletingJob.department}</div>
+                {deletingJob.category && (
+                  <div className="text-[10px] font-bold text-indigo-900 mt-1">Category: {deletingJob.category}</div>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Are you sure you want to permanently delete this job position from the persistent database?
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingJob(null)}
+                  className="px-4 py-2 text-slate-600 font-semibold text-xs hover:text-slate-900 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteSingle}
+                  disabled={deletingProcess}
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  {deletingProcess ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  <span>Confirm Delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= BULK DELETION CONFIRMATION MODAL ================= */}
+        {isBulkDeleteOpen && (
+          <div className="fixed inset-0 z-70 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-rose-200 p-6 space-y-4">
+              <div className="flex items-center gap-3 text-rose-600">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-rose-600" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-slate-900 text-base">Delete {selectedJobIds.length} Selected Jobs?</h4>
+                  <p className="text-xs text-slate-500">Bulk action permanently removes data.</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                You are about to permanently remove <strong>{selectedJobIds.length}</strong> selected job vacancies from the public website and admin database.
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkDeleteOpen(false)}
+                  className="px-4 py-2 text-slate-600 font-semibold text-xs hover:text-slate-900 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmBulkDelete}
+                  disabled={deletingProcess}
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  {deletingProcess ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  <span>Delete {selectedJobIds.length} Jobs</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= DUPLICATE JOB WARNING MODAL ================= */}
+        {duplicateWarning && (
+          <div className="fixed inset-0 z-80 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-amber-200 p-6 space-y-4">
+              <div className="flex items-center gap-3 text-amber-600">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-slate-900 text-base">Possible Duplicate Job Detected</h4>
+                  <p className="text-xs text-slate-500">Duplicate Title &amp; Company combination</p>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 text-xs space-y-2">
+                <p className="font-semibold text-amber-900">{duplicateWarning.message}</p>
+                <div className="text-slate-700">
+                  <strong>Title:</strong> {duplicateWarning.jobData.title} <br />
+                  <strong>Company / Dept:</strong> {duplicateWarning.jobData.companyName || duplicateWarning.jobData.department}
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Would you like to modify the job information or publish it anyway?
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDuplicateWarning(null)}
+                  className="px-4 py-2 text-slate-600 font-semibold text-xs hover:text-slate-900 cursor-pointer"
+                >
+                  Cancel &amp; Edit Fields
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveJobSubmit(undefined, true)}
+                  disabled={savingJob}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  {savingJob ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                  <span>Publish / Save Anyway</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= ADD / EDIT JOB VACANCY MODAL ================= */}
+        {isJobModalOpen && editingJob && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4 overflow-y-auto">
+            <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[90vh] flex flex-col">
+              
+              <div className="bg-slate-900 text-white p-4 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-blue-400" />
+                  <h4 className="font-bold text-sm">
+                    {editingJob.id ? 'Edit Job Vacancy Details' : 'Add New Job Vacancy'}
+                  </h4>
+                </div>
+                <button
+                  onClick={() => setIsJobModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => handleSaveJobSubmit(e, false)} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   
                   {/* Job Title */}
@@ -1319,96 +1701,122 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                       required
                       value={editingJob.title || ''}
                       onChange={(e) => setEditingJob({ ...editingJob, title: e.target.value })}
-                      placeholder="e.g. Data Entry Operator"
-                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-600"
+                      placeholder="e.g. Computer Operator, Staff Nurse, Security Guard"
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
 
-                  {/* Department / Company */}
+                  {/* Company / Department Name */}
                   <div>
-                    <label className="block font-bold text-slate-800 mb-1">Department / Organization / Company</label>
+                    <label className="block font-bold text-slate-800 mb-1">Company / Department Name *</label>
                     <input
                       type="text"
-                      value={editingJob.department || ''}
-                      onChange={(e) => setEditingJob({ ...editingJob, department: e.target.value })}
-                      placeholder="e.g. DHQ Hospital / Punjab Police / Al-Shifa Pharmacy"
+                      required
+                      value={editingJob.companyName || editingJob.department || ''}
+                      onChange={(e) => setEditingJob({ ...editingJob, companyName: e.target.value, department: e.target.value })}
+                      placeholder="e.g. National Logistics Cell, Civil Defence, Private IT Agency"
                       className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
                     />
                   </div>
 
-                  {/* Category / Subcategory */}
+                  {/* Company Logo URL */}
                   <div>
-                    <label className="block font-bold text-slate-800 mb-1">Job Category / Sector</label>
+                    <label className="block font-bold text-slate-800 mb-1">Company Logo URL (optional)</label>
                     <input
-                      type="text"
-                      list="category-suggestions"
-                      value={editingJob.category || ''}
+                      type="url"
+                      value={editingJob.companyLogo || ''}
+                      onChange={(e) => setEditingJob({ ...editingJob, companyLogo: e.target.value })}
+                      placeholder="https://example.com/logo.png"
+                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
+                    />
+                  </div>
+
+                  {/* Job Category */}
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Job Category *</label>
+                    <select
+                      value={editingJob.category || 'Government Jobs'}
                       onChange={(e) => setEditingJob({ ...editingJob, category: e.target.value })}
-                      placeholder="e.g. Government Hospitals & Healthcare / Medical Stores & Pharmacy"
-                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300 font-semibold"
-                    />
-                    <datalist id="category-suggestions">
-                      {JOB_CAMPAIGNS.flatMap(c => c.categories).map((cat, idx) => (
-                        <option key={idx} value={cat} />
-                      ))}
-                    </datalist>
+                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300 font-bold text-blue-900"
+                    >
+                      <option value="Government Jobs">Government Jobs</option>
+                      <option value="Private Jobs">Private Jobs</option>
+                      <option value="Factory Worker">Factory Worker</option>
+                      <option value="Freelancer">Freelancer</option>
+                      <option value="Office Jobs">Office Jobs</option>
+                      <option value="Healthcare">Healthcare</option>
+                      <option value="IT & Software">IT &amp; Software</option>
+                      <option value="Sales & Marketing">Sales &amp; Marketing</option>
+                      <option value="Teaching">Teaching</option>
+                      <option value="Driver">Driver / Transport</option>
+                      <option value="Security">Security Guard</option>
+                    </select>
                   </div>
 
-                  {/* Medical Qualification (Optional) */}
+                  {/* Employment Type */}
                   <div>
-                    <label className="block font-bold text-slate-800 mb-1">Medical / Registration Requirement (Optional)</label>
+                    <label className="block font-bold text-slate-800 mb-1">Employment / Job Type</label>
+                    <select
+                      value={editingJob.employmentType || editingJob.jobType || 'Full-time'}
+                      onChange={(e) => setEditingJob({ ...editingJob, employmentType: e.target.value, jobType: e.target.value })}
+                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300 font-medium"
+                    >
+                      <option value="Full-time">Full-time</option>
+                      <option value="Part-time">Part-time</option>
+                      <option value="Contract">Contract</option>
+                      <option value="Remote">Remote</option>
+                      <option value="Freelance">Freelance</option>
+                    </select>
+                  </div>
+
+                  {/* Location & Country */}
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Location *</label>
                     <input
                       type="text"
-                      value={editingJob.medicalQualification || ''}
-                      onChange={(e) => setEditingJob({ ...editingJob, medicalQualification: e.target.value })}
-                      placeholder="e.g. MBBS + PMDC / Pharm-D / PNC Nursing License"
+                      required
+                      value={editingJob.location || ''}
+                      onChange={(e) => setEditingJob({ ...editingJob, location: e.target.value })}
+                      placeholder="e.g. Islamabad, Lahore, All Pakistan, Remote"
                       className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
                     />
                   </div>
 
-                  {/* Experience Required */}
                   <div>
-                    <label className="block font-bold text-slate-800 mb-1">Experience Required</label>
+                    <label className="block font-bold text-slate-800 mb-1">Country</label>
                     <input
                       type="text"
-                      value={editingJob.experienceRequired || ''}
-                      onChange={(e) => setEditingJob({ ...editingJob, experienceRequired: e.target.value })}
-                      placeholder="e.g. Fresh / 1 Year House Job / 2 Years Experience"
+                      value={editingJob.country || 'Pakistan'}
+                      onChange={(e) => setEditingJob({ ...editingJob, country: e.target.value })}
+                      placeholder="e.g. Pakistan, UAE, Remote"
                       className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
                     />
                   </div>
 
-                  {/* Minimum Qualification */}
+                  {/* Minimum Qualification Dropdown */}
                   <div>
-                    <label className="block font-bold text-slate-800 mb-1">Minimum Qualification Level *</label>
+                    <label className="block font-bold text-slate-800 mb-1">Minimum Qualification Tier *</label>
                     <select
                       value={editingJob.minQualification || 'Primary'}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setEditingJob({
-                          ...editingJob,
-                          minQualification: val,
-                          qualificationRequired: editingJob.qualificationRequired || `${val} or Higher`
-                        });
-                      }}
-                      className="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 font-bold bg-slate-50"
+                      onChange={(e) => setEditingJob({ ...editingJob, minQualification: e.target.value })}
+                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300 font-bold"
                     >
                       <option value="Primary">Primary (Level 1 Access)</option>
                       <option value="Middle">Middle (Level 1 Access)</option>
                       <option value="Matric">Matric (Level 2 Access)</option>
+                      <option value="Matriculation">Matriculation (Level 2 Access)</option>
                       <option value="Intermediate">Intermediate (Level 3 Access)</option>
-                      <option value="Diploma">Diploma (Level 3 Access)</option>
-                      <option value="Technical Diploma">Technical Diploma (Level 3 Access)</option>
-                      <option value="Certification">Certification (Level 3 Access)</option>
-                      <option value="Associate Degree">Associate Degree (Level 3 Access)</option>
+                      <option value="FA">FA (Level 3 Access)</option>
+                      <option value="FSc">FSc (Level 3 Access)</option>
+                      <option value="ICS">ICS (Level 3 Access)</option>
+                      <option value="I.Com">I.Com (Level 3 Access)</option>
                       <option value="Bachelor">Bachelor (Level 3 Access)</option>
                       <option value="BS">BS (Level 3 Access)</option>
                       <option value="Master">Master (Level 3 Access)</option>
-                      <option value="Other Higher Qualification">Other Higher Qualification (Level 3 Access)</option>
                     </select>
                   </div>
 
-                  {/* Qualification Required Text */}
+                  {/* Displayed Required Qualification */}
                   <div>
                     <label className="block font-bold text-slate-800 mb-1">Displayed Required Qualification</label>
                     <input
@@ -1420,26 +1828,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                     />
                   </div>
 
-                  {/* Job Type */}
-                  <div>
-                    <label className="block font-bold text-slate-800 mb-1">Job Type</label>
-                    <input
-                      type="text"
-                      value={editingJob.jobType || ''}
-                      onChange={(e) => setEditingJob({ ...editingJob, jobType: e.target.value })}
-                      placeholder="e.g. Freelance / Remote"
-                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
-                    />
-                  </div>
-
                   {/* Salary Range */}
                   <div>
-                    <label className="block font-bold text-slate-800 mb-1">Salary / Pay Range</label>
+                    <label className="block font-bold text-slate-800 mb-1">Salary Range</label>
                     <input
                       type="text"
                       value={editingJob.salaryRange || ''}
                       onChange={(e) => setEditingJob({ ...editingJob, salaryRange: e.target.value })}
-                      placeholder="e.g. PKR 25,000 - 35,000 / month"
+                      placeholder="e.g. PKR 35,000 - 55,000 / month"
                       className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300 font-bold text-emerald-800"
                     />
                   </div>
@@ -1456,19 +1852,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                     />
                   </div>
 
-                  {/* Location */}
-                  <div>
-                    <label className="block font-bold text-slate-800 mb-1">Location</label>
-                    <input
-                      type="text"
-                      value={editingJob.location || ''}
-                      onChange={(e) => setEditingJob({ ...editingJob, location: e.target.value })}
-                      placeholder="e.g. Remote / Online"
-                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
-                    />
-                  </div>
-
-                  {/* Deadline */}
+                  {/* Deadline & Posted Date */}
                   <div>
                     <label className="block font-bold text-slate-800 mb-1">Application Deadline</label>
                     <input
@@ -1480,6 +1864,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                     />
                   </div>
 
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Posted Date</label>
+                    <input
+                      type="text"
+                      value={editingJob.postedDate || new Date().toISOString().split('T')[0]}
+                      onChange={(e) => setEditingJob({ ...editingJob, postedDate: e.target.value })}
+                      className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
+                    />
+                  </div>
+
                   {/* Required Skills */}
                   <div className="sm:col-span-2">
                     <label className="block font-bold text-slate-800 mb-1">Required Skills (comma separated)</label>
@@ -1487,33 +1881,73 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                       type="text"
                       value={Array.isArray(editingJob.requiredSkills) ? editingJob.requiredSkills.join(', ') : (editingJob.requiredSkills || '')}
                       onChange={(e) => setEditingJob({ ...editingJob, requiredSkills: e.target.value.split(',').map(s => s.trim()) })}
-                      placeholder="e.g. Typing Speed, MS Word, Data Verification"
+                      placeholder="e.g. Computer Operating, Data Verification, Communication"
                       className="w-full text-xs px-3.5 py-2 rounded-xl border border-slate-300"
                     />
                   </div>
 
                   {/* Job Description */}
                   <div className="sm:col-span-2">
-                    <label className="block font-bold text-slate-800 mb-1">Job Description</label>
+                    <label className="block font-bold text-slate-800 mb-1">Job Description *</label>
                     <textarea
                       rows={3}
+                      required
                       value={editingJob.description || ''}
                       onChange={(e) => setEditingJob({ ...editingJob, description: e.target.value })}
-                      placeholder="Detailed responsibilities and requirements..."
+                      placeholder="Detailed overview of job vacancy..."
                       className="w-full text-xs p-3 rounded-xl border border-slate-300"
                     />
                   </div>
 
-                  {/* Status */}
+                  {/* Responsibilities */}
+                  <div className="sm:col-span-2">
+                    <label className="block font-bold text-slate-800 mb-1">Key Responsibilities</label>
+                    <textarea
+                      rows={2}
+                      value={editingJob.responsibilities || ''}
+                      onChange={(e) => setEditingJob({ ...editingJob, responsibilities: e.target.value })}
+                      placeholder="Key daily duties..."
+                      className="w-full text-xs p-3 rounded-xl border border-slate-300"
+                    />
+                  </div>
+
+                  {/* Requirements */}
+                  <div className="sm:col-span-2">
+                    <label className="block font-bold text-slate-800 mb-1">Requirements</label>
+                    <textarea
+                      rows={2}
+                      value={editingJob.requirements || ''}
+                      onChange={(e) => setEditingJob({ ...editingJob, requirements: e.target.value })}
+                      placeholder="Eligibility requirements..."
+                      className="w-full text-xs p-3 rounded-xl border border-slate-300"
+                    />
+                  </div>
+
+                  {/* Status Toggle */}
                   <div>
-                    <label className="block font-bold text-slate-800 mb-1">Status</label>
+                    <label className="block font-bold text-slate-800 mb-1">Publish Status</label>
                     <select
-                      value={editingJob.status || 'active'}
-                      onChange={(e) => setEditingJob({ ...editingJob, status: e.target.value as 'active' | 'closed' })}
+                      value={editingJob.status || 'published'}
+                      onChange={(e) => setEditingJob({ ...editingJob, status: e.target.value as 'published' | 'unpublished' })}
                       className="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 font-bold"
                     >
-                      <option value="active">Active (Accepting Applications)</option>
-                      <option value="closed">Closed</option>
+                      <option value="published">Published (Visible on Website)</option>
+                      <option value="unpublished">Unpublished (Draft / Hidden)</option>
+                    </select>
+                  </div>
+
+                  {/* Application Method & URL */}
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">Application Method</label>
+                    <select
+                      value={editingJob.applicationMethod || 'online'}
+                      onChange={(e) => setEditingJob({ ...editingJob, applicationMethod: e.target.value as any })}
+                      className="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 font-medium"
+                    >
+                      <option value="online">Online Registration Slip (JobsHub)</option>
+                      <option value="email">Direct Email Application</option>
+                      <option value="portal">External Career Portal</option>
+                      <option value="walk-in">Walk-in Interview</option>
                     </select>
                   </div>
 
@@ -1553,7 +1987,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
 
                 </div>
 
-                <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
+                <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
                   <button
                     type="button"
                     onClick={() => setIsJobModalOpen(false)}

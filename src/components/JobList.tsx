@@ -40,11 +40,23 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'unlocked' | 'locked'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  const [selectedJobType, setSelectedJobType] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'title-asc' | 'title-desc' | 'vacancies'>('newest');
+  const [visibleCount, setVisibleCount] = useState<number>(24);
   const [detailModalJob, setDetailModalJob] = useState<JobPosition | null>(null);
 
-  // Extract all unique categories present in the current job list
+  // Extract unique categories, locations, and job types
   const availableCategories = Array.from(
     new Set(jobs.map(j => j.category).filter((c): c is string => Boolean(c)))
+  ).sort();
+
+  const availableLocations = Array.from(
+    new Set(jobs.map(j => j.location).filter((l): l is string => Boolean(l)))
+  ).sort();
+
+  const availableJobTypes = Array.from(
+    new Set(jobs.map(j => j.jobType).filter((t): t is string => Boolean(t)))
   ).sort();
 
   // Sync selection to localStorage
@@ -52,26 +64,30 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
     localStorage.setItem('user_qualification', selectedQualification);
   }, [selectedQualification]);
 
-  // Reset category filter when job list updates (e.g. campaign changed)
+  // Reset pagination when search/filter options change
   useEffect(() => {
-    setSelectedCategory('all');
-  }, [jobs]);
+    setVisibleCount(24);
+  }, [searchTerm, filterType, selectedCategory, selectedLocation, selectedJobType, sortOrder, selectedQualification]);
 
   const unlockInfo = getQualificationUnlockMessage(selectedQualification);
 
-  // Filter jobs by search, category, and status
+  // Filter jobs by search, category, location, job type, and unlock status
   const processedJobs = jobs.map(job => ({
     ...job,
     unlocked: isJobUnlocked(selectedQualification, job.minQualification)
   }));
 
-  const filteredJobs = processedJobs.filter(job => {
+  let filteredJobs = processedJobs.filter(job => {
+    const s = searchTerm.toLowerCase().trim();
     const matchesSearch =
-      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (job.category && job.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (job.requiredSkills && job.requiredSkills.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())));
+      !s ||
+      job.title.toLowerCase().includes(s) ||
+      job.department.toLowerCase().includes(s) ||
+      (job.organization && job.organization.toLowerCase().includes(s)) ||
+      (job.location && job.location.toLowerCase().includes(s)) ||
+      (job.category && job.category.toLowerCase().includes(s)) ||
+      job.description.toLowerCase().includes(s) ||
+      (job.requiredSkills && job.requiredSkills.some(sk => sk.toLowerCase().includes(s)));
 
     if (!matchesSearch) return false;
 
@@ -79,10 +95,29 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
       return false;
     }
 
+    if (selectedLocation !== 'all' && job.location !== selectedLocation) {
+      return false;
+    }
+
+    if (selectedJobType !== 'all' && job.jobType !== selectedJobType) {
+      return false;
+    }
+
     if (filterType === 'unlocked') return job.unlocked;
     if (filterType === 'locked') return !job.unlocked;
     return true;
   });
+
+  // Apply Sorting
+  filteredJobs = [...filteredJobs].sort((a, b) => {
+    if (sortOrder === 'title-asc') return a.title.localeCompare(b.title);
+    if (sortOrder === 'title-desc') return b.title.localeCompare(a.title);
+    if (sortOrder === 'vacancies') return (b.vacancies || 0) - (a.vacancies || 0);
+    if (sortOrder === 'oldest') return a.id.localeCompare(b.id);
+    return b.id.localeCompare(a.id);
+  });
+
+  const displayedJobs = filteredJobs.slice(0, visibleCount);
 
   const unlockedCount = processedJobs.filter(j => j.unlocked).length;
   const lockedCount = processedJobs.filter(j => !j.unlocked).length;
@@ -201,46 +236,92 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
         </div>
 
         {/* ================= FILTER AND SEARCH BAR ================= */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200/80 space-y-3.5 shadow-2xs">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            {/* Search Input */}
+            <div className="relative md:col-span-5">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Search by title, department, skills..."
+                placeholder="Search job title, company, location, skills..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-600"
               />
             </div>
 
-            {/* Status Filter Pills */}
-            <div className="flex items-center gap-2 text-xs font-semibold overflow-x-auto w-full sm:w-auto">
+            {/* Location Select */}
+            <div className="md:col-span-2">
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="w-full py-2 px-2.5 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 cursor-pointer"
+              >
+                <option value="all">All Locations ({jobs.length})</option>
+                {availableLocations.map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Job Type Select */}
+            <div className="md:col-span-2">
+              <select
+                value={selectedJobType}
+                onChange={(e) => setSelectedJobType(e.target.value)}
+                className="w-full py-2 px-2.5 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 cursor-pointer"
+              >
+                <option value="all">All Job Types</option>
+                {availableJobTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort Selector */}
+            <div className="md:col-span-3">
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as any)}
+                className="w-full py-2 px-2.5 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-blue-600 cursor-pointer"
+              >
+                <option value="newest">Sort: Newest First</option>
+                <option value="oldest">Sort: Oldest First</option>
+                <option value="title-asc">Sort: Title (A-Z)</option>
+                <option value="title-desc">Sort: Title (Z-A)</option>
+                <option value="vacancies">Sort: Vacancies (High to Low)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Status Filter Pills & Quick Resets */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-2 text-xs font-semibold overflow-x-auto">
               <button
                 onClick={() => setFilterType('all')}
-                className={`px-3.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl border transition-colors cursor-pointer ${
                   filterType === 'all'
                     ? 'bg-slate-900 text-white border-slate-900 font-bold'
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                All Jobs ({jobs.length})
+                All Vacancies ({filteredJobs.length})
               </button>
 
               <button
                 onClick={() => setFilterType('unlocked')}
-                className={`px-3.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl border transition-colors cursor-pointer ${
                   filterType === 'unlocked'
                     ? 'bg-emerald-600 text-white border-emerald-600 font-bold'
                     : 'bg-white text-emerald-800 border-slate-200 hover:bg-emerald-50'
                 }`}
               >
-                Unlocked Only ({unlockedCount})
+                Unlocked ({unlockedCount})
               </button>
 
               <button
                 onClick={() => setFilterType('locked')}
-                className={`px-3.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl border transition-colors cursor-pointer ${
                   filterType === 'locked'
                     ? 'bg-slate-800 text-white border-slate-800 font-bold'
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -249,6 +330,22 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
                 Locked ({lockedCount})
               </button>
             </div>
+
+            {(searchTerm || selectedCategory !== 'all' || selectedLocation !== 'all' || selectedJobType !== 'all' || filterType !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('all');
+                  setSelectedLocation('all');
+                  setSelectedJobType('all');
+                  setFilterType('all');
+                  setSortOrder('newest');
+                }}
+                className="text-xs font-extrabold text-red-600 hover:text-red-700 underline self-end sm:self-auto cursor-pointer flex items-center gap-1"
+              >
+                <X className="w-3.5 h-3.5" /> Clear All Filters
+              </button>
+            )}
           </div>
 
           {/* Category Filter Pills Bar */}
@@ -265,7 +362,7 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
                     : 'bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-900'
                 }`}
               >
-                All Categories
+                All ({jobs.length})
               </button>
               {availableCategories.map(cat => (
                 <button
@@ -288,11 +385,14 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
         {filteredJobs.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 p-8">
             <AlertCircle className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-            <h3 className="text-base font-bold text-slate-800">No jobs match your search filter</h3>
-            <p className="text-xs text-slate-500 mt-1">Try resetting your search term or switching filter mode.</p>
+            <h3 className="text-base font-bold text-slate-800">No vacancies match your search filter</h3>
+            <p className="text-xs text-slate-500 mt-1">Try clearing your search term or choosing a different category/location.</p>
             <button
               onClick={() => {
                 setSearchTerm('');
+                setSelectedCategory('all');
+                setSelectedLocation('all');
+                setSelectedJobType('all');
                 setFilterType('all');
               }}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer"
@@ -301,8 +401,16 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredJobs.map((job) => {
+          <div className="space-y-6">
+            <div className="flex items-center justify-between text-xs text-slate-500 font-semibold px-1">
+              <span>
+                Showing <strong className="text-slate-900">{displayedJobs.length}</strong> of <strong className="text-slate-900">{filteredJobs.length}</strong> available job listings
+              </span>
+              <span>Total Listings: {jobs.length} Unique Jobs</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displayedJobs.map((job) => {
               if (job.unlocked) {
                 // UNLOCKED JOB CARD
                 return (
@@ -457,6 +565,23 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
                 );
               }
             })}
+            </div>
+
+            {/* Pagination / Load More Button */}
+            {visibleCount < filteredJobs.length && (
+              <div className="pt-6 text-center space-y-2">
+                <button
+                  onClick={() => setVisibleCount(prev => prev + 24)}
+                  className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg transition-all hover:scale-[1.02] cursor-pointer inline-flex items-center gap-2"
+                >
+                  <span>Load More Job Vacancies ({filteredJobs.length - visibleCount} remaining)</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Showing {visibleCount} of {filteredJobs.length} matching jobs
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -515,10 +640,15 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
                 </div>
 
                 {/* Grid of Attributes */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
                   <div>
                     <span className="text-slate-400 block text-[10px]">Job Type</span>
-                    <strong className="text-slate-900 text-xs">{detailModalJob.jobType || 'Freelance / Remote'}</strong>
+                    <strong className="text-slate-900 text-xs">{detailModalJob.jobType || 'Full-Time / Regular'}</strong>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Experience Required</span>
+                    <strong className="text-slate-900 text-xs">{detailModalJob.experience || detailModalJob.experienceRequired || 'Fresh / No Experience Required'}</strong>
                   </div>
 
                   <div>
@@ -539,6 +669,11 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
                   <div>
                     <span className="text-slate-400 block text-[10px]">Age Limit</span>
                     <strong className="text-slate-900 text-xs">{detailModalJob.ageLimit}</strong>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Minimum Qualification</span>
+                    <strong className="text-slate-900 text-xs">{detailModalJob.minQualification}</strong>
                   </div>
 
                   <div>

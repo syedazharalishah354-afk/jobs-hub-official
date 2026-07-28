@@ -59,10 +59,11 @@ export async function fetchJobs(campaignSlug?: string): Promise<JobPosition[]> {
 
   const filterByCampaign = (jobList: JobPosition[]) => {
     if (targetSlug === 'all') return jobList;
-    return jobList.filter((j: JobPosition) =>
+    const filtered = jobList.filter((j: JobPosition) =>
       (Array.isArray(j.campaigns) && j.campaigns.includes(targetSlug)) ||
       (j as any).campaign === targetSlug
     );
+    return filtered.length > 0 ? filtered : jobList;
   };
 
   try {
@@ -505,9 +506,24 @@ export async function changeAdminPassword(
   if (!res.ok) throw new Error(data.error || 'Failed to update password');
 }
 
+export async function fetchAdminJobs(token: string): Promise<JobPosition[]> {
+  try {
+    const res = await fetch('/api/admin/jobs', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch admin jobs from API, falling back', err);
+  }
+  return fetchJobs();
+}
+
 export async function createAdminJob(
   token: string,
-  jobData: Partial<JobPosition>
+  jobData: Partial<JobPosition> & { allowDuplicate?: boolean }
 ): Promise<{ message: string; job: JobPosition }> {
   const res = await fetch('/api/admin/jobs', {
     method: 'POST',
@@ -518,14 +534,19 @@ export async function createAdminJob(
     body: JSON.stringify(jobData)
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to create job vacancy');
+  if (!res.ok) {
+    const err = new Error(data.error || 'Failed to create job vacancy') as any;
+    err.isDuplicate = data.isDuplicate;
+    err.duplicateId = data.duplicateId;
+    throw err;
+  }
   return data;
 }
 
 export async function updateAdminJob(
   token: string,
   id: string,
-  jobData: Partial<JobPosition>
+  jobData: Partial<JobPosition> & { allowDuplicate?: boolean }
 ): Promise<{ message: string; job: JobPosition }> {
   const res = await fetch(`/api/admin/jobs/${id}`, {
     method: 'PUT',
@@ -536,7 +557,12 @@ export async function updateAdminJob(
     body: JSON.stringify(jobData)
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to update job vacancy');
+  if (!res.ok) {
+    const err = new Error(data.error || 'Failed to update job vacancy') as any;
+    err.isDuplicate = data.isDuplicate;
+    err.duplicateId = data.duplicateId;
+    throw err;
+  }
   return data;
 }
 
@@ -550,5 +576,64 @@ export async function deleteAdminJob(
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Failed to delete job vacancy');
+  return data;
+}
+
+export async function togglePublishAdminJob(
+  token: string,
+  id: string,
+  newStatus: 'published' | 'unpublished' | 'active' | 'draft'
+): Promise<{ message: string; job: JobPosition }> {
+  return updateAdminJob(token, id, { status: newStatus as any });
+}
+
+export async function bulkPublishAdminJobs(
+  token: string,
+  ids: string[]
+): Promise<{ message: string }> {
+  const res = await fetch('/api/admin/jobs/bulk-publish', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ ids })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to bulk publish jobs');
+  return data;
+}
+
+export async function bulkUnpublishAdminJobs(
+  token: string,
+  ids: string[]
+): Promise<{ message: string }> {
+  const res = await fetch('/api/admin/jobs/bulk-unpublish', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ ids })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to bulk unpublish jobs');
+  return data;
+}
+
+export async function bulkDeleteAdminJobs(
+  token: string,
+  ids: string[]
+): Promise<{ message: string }> {
+  const res = await fetch('/api/admin/jobs/bulk-delete', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ ids })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to bulk delete jobs');
   return data;
 }
