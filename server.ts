@@ -10,10 +10,22 @@ import { getDB, saveDB, DEFAULT_JOBS } from './src/server/db.js';
 import { Application, ApplicationStatus, JobPosition } from './src/types.js';
 import { isJobUnlocked } from './src/utils/qualification.js';
 
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'jobshub_official_jwt_secret_key_2026';
 
 const app = express();
+
+// CORS Middleware for Hostinger production deployment
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
@@ -935,8 +947,10 @@ app.post('/api/admin/jobs/bulk-delete', authMiddleware, (req: AuthenticatedReque
 
 // Start Vite / Static Server integration
 async function startServer() {
-  // Mount Vite middleware in development
-  if (process.env.NODE_ENV !== 'production') {
+  const hasDist = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
+  const isProduction = process.env.NODE_ENV === 'production' || hasDist;
+
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'
@@ -945,13 +959,13 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
+    app.get('*', (_req: Request, res: Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`JobsHubOfficial Server running on http://0.0.0.0:${PORT}`);
+    console.log(`JobsHubOfficial Hostinger Production Server running on port ${PORT}`);
   });
 }
 
