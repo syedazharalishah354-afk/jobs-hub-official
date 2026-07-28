@@ -36,6 +36,15 @@ if (!fs.existsSync('./uploads')) {
 // If dist directory exists, copy assets, .htaccess, database.sql, uploads
 if (fs.existsSync('./dist')) {
   fs.writeFileSync('./dist/jobs.json', JSON.stringify(AUDITED_JOBS, null, 2), 'utf-8');
+  if (fs.existsSync('./public/api')) {
+    if (!fs.existsSync('./dist/api')) {
+      fs.mkdirSync('./dist/api', { recursive: true });
+    }
+    const apiFiles = fs.readdirSync('./public/api');
+    for (const f of apiFiles) {
+      fs.copyFileSync(`./public/api/${f}`, `./dist/api/${f}`);
+    }
+  }
   if (fs.existsSync('./public/.htaccess')) {
     fs.copyFileSync('./public/.htaccess', './dist/.htaccess');
   }
