@@ -5,7 +5,6 @@ import crypto from 'crypto';
 import multer from 'multer';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { createServer as createViteServer } from 'vite';
 import { getDB, saveDB, DEFAULT_JOBS } from './src/server/db.js';
 import { Application, ApplicationStatus, JobPosition } from './src/types.js';
 import { isJobUnlocked } from './src/utils/qualification.js';
@@ -998,22 +997,34 @@ app.post('/api/admin/jobs/bulk-delete', authMiddleware, (req: AuthenticatedReque
 });
 
 
+// 404 Handler for API routes to prevent returning HTML index.html for API requests
+app.all('/api/*', (_req: Request, res: Response) => {
+  res.status(404).json({ error: 'API endpoint not found.' });
+});
+
 // Start Vite / Static Server integration
 async function startServer() {
-  const hasDist = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
-  const isProduction = process.env.NODE_ENV === 'production' || hasDist;
+  const isProduction = process.env.NODE_ENV === 'production';
 
   if (!isProduction) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = fs.existsSync(path.join(process.cwd(), 'dist'))
+      ? path.join(process.cwd(), 'dist')
+      : path.join(__dirname);
     app.use(express.static(distPath));
     app.get('*', (_req: Request, res: Response) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).send('Production build index.html not found. Please run npm run build.');
+      }
     });
   }
 
