@@ -35,6 +35,7 @@ import {
   Key,
   DollarSign,
   Upload,
+  Phone,
   RefreshCw,
   AlertCircle,
   ChevronRight,
@@ -1342,6 +1343,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                             className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono"
                           />
                         </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 space-y-4">
+                      <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-emerald-600" />
+                        Official WhatsApp Support Contact
+                      </h4>
+                      <p className="text-xs text-slate-500">Official WhatsApp support number for candidate inquiries &amp; confirmation slip contact button.</p>
+
+                      <div className="text-xs">
+                        <label className="block font-bold text-slate-700 mb-1">WhatsApp Number (e.g., 0301-8899771)</label>
+                        <input
+                          type="text"
+                          required
+                          value={settingsForm.whatsappNumber || '0301-8899771'}
+                          onChange={(e) => setSettingsForm({
+                            ...settingsForm,
+                            whatsappNumber: e.target.value
+                          })}
+                          placeholder="0301-8899771"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono"
+                        />
                       </div>
                     </div>
 

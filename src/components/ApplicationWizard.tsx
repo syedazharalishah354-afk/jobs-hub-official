@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { SystemSettings, Application, JobPosition } from '../types.js';
 import { submitApplicationStep1, submitPaymentProof, uploadImageFile, fetchApplicationById, autoApproveApplication } from '../services/api.js';
 import { isJobUnlocked, QUALIFICATION_CATEGORIES } from '../utils/qualification.js';
-import { X, CheckCircle2, User, Mail, Phone, MapPin, GraduationCap, FileText, Upload, Copy, Check, Clock, ShieldCheck, Printer, AlertTriangle, ArrowRight, ArrowLeft, RefreshCw, Sparkles, Building, Briefcase, Camera } from 'lucide-react';
+import { getWhatsAppUrl } from '../utils/whatsapp.js';
+import { X, CheckCircle2, User, Mail, Phone, MapPin, GraduationCap, FileText, Upload, Copy, Check, Clock, ShieldCheck, Printer, AlertTriangle, ArrowRight, ArrowLeft, RefreshCw, Sparkles, Building, Briefcase, Camera, MessageCircle } from 'lucide-react';
 
 interface ApplicationWizardProps {
   isOpen: boolean;
@@ -1178,7 +1179,16 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                   </div>
                 </div>
 
-                <div className="pt-2 flex justify-end gap-3">
+                <div className="pt-2 flex flex-wrap items-center justify-end gap-3">
+                  <a
+                    href={getWhatsAppUrl(config?.whatsappNumber, submittedApp.referenceNo, submittedApp.jobPosition)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4 fill-emerald-600 text-white" />
+                    <span>Contact on WhatsApp</span>
+                  </a>
                   <button
                     onClick={() => {
                       if (onViewSlip) onViewSlip(submittedApp);

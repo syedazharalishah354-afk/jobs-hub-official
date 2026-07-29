@@ -376,6 +376,7 @@ export default function App() {
       <OfficialSlipModal
         app={selectedSlipApp}
         onClose={() => setSelectedSlipApp(null)}
+        whatsappNumber={config?.whatsappNumber}
       />
 
     </div>

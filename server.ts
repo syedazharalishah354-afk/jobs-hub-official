@@ -269,7 +269,9 @@ app.get('/api/config', (_req: Request, res: Response) => {
   res.json({
     applicationFee: db.settings.applicationFee,
     jazzcash: db.settings.jazzcash,
-    easypaisa: db.settings.easypaisa
+    easypaisa: db.settings.easypaisa,
+    interviewPolicy: db.settings.interviewPolicy,
+    whatsappNumber: db.settings.whatsappNumber || '0301-8899771'
   });
 });
 
@@ -747,7 +749,7 @@ app.get('/api/admin/settings', authMiddleware, (_req: Request, res: Response) =>
 });
 
 app.put('/api/admin/settings', authMiddleware, (req: Request, res: Response) => {
-  const { applicationFee, jazzcash, easypaisa, interviewPolicy } = req.body;
+  const { applicationFee, jazzcash, easypaisa, interviewPolicy, whatsappNumber } = req.body;
 
   const db = getDB();
   if (typeof applicationFee === 'number' && applicationFee > 0) {
@@ -769,6 +771,9 @@ app.put('/api/admin/settings', authMiddleware, (req: Request, res: Response) => 
   }
   if (typeof interviewPolicy === 'string') {
     db.settings.interviewPolicy = interviewPolicy;
+  }
+  if (typeof whatsappNumber === 'string') {
+    db.settings.whatsappNumber = whatsappNumber;
   }
 
   saveDB(db);
