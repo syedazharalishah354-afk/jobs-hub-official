@@ -131,8 +131,8 @@ export const Hero: React.FC<HeroProps> = ({ onOpenApply, onOpenTrack, appFee = 3
                     3
                   </div>
                   <div>
-                    <h4 className="font-semibold text-emerald-950">Admin Approval &amp; Final Slip</h4>
-                    <p className="text-emerald-800/80 text-[11px]">Admin approves payment proof and issues unique Application Reference No.</p>
+                    <h4 className="font-semibold text-emerald-950">Auto Approval &amp; Final Slip</h4>
+                    <p className="text-emerald-800/80 text-[11px]">System automatically approves completed applications and issues unique Roll No slip.</p>
                   </div>
                 </div>
               </div>

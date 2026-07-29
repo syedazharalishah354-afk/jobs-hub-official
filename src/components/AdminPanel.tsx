@@ -1466,32 +1466,80 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                   </div>
                 </div>
 
-                {/* Payment Proof Screenshot Section */}
+                {/* Submitted Documents & Proofs Gallery */}
                 <div className="space-y-2">
-                  <span className="font-bold text-slate-800 block">Payment Screenshot Proof</span>
-                  {selectedApp.paymentScreenshot ? (
-                    <div className="relative group rounded-xl overflow-hidden border border-slate-300 max-h-64 flex items-center justify-center bg-slate-900">
-                      <img
-                        src={selectedApp.paymentScreenshot}
-                        alt="Payment Proof"
-                        className="max-h-64 object-contain cursor-pointer"
-                        onClick={() => setZoomImage(selectedApp.paymentScreenshot!)}
-                      />
-                      <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <button
-                          onClick={() => setZoomImage(selectedApp.paymentScreenshot!)}
-                          className="px-3 py-1.5 bg-white text-slate-900 font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer"
-                        >
-                          <Eye className="w-4 h-4 text-blue-600" />
-                          <span>Click to Zoom</span>
-                        </button>
-                      </div>
+                  <span className="font-bold text-slate-800 block text-xs uppercase tracking-wide">Submitted Documents &amp; Proofs</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    
+                    {/* CNIC Front */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">CNIC Front</span>
+                      {selectedApp.cnicFrontUrl || (selectedApp as any).cnicFront ? (
+                        <div className="relative group rounded-lg overflow-hidden border border-slate-200 bg-slate-900 h-28 flex items-center justify-center">
+                          <img
+                            src={selectedApp.cnicFrontUrl || (selectedApp as any).cnicFront}
+                            alt="CNIC Front"
+                            className="h-full w-full object-cover cursor-pointer group-hover:opacity-80 transition-opacity"
+                            onClick={() => setZoomImage(selectedApp.cnicFrontUrl || (selectedApp as any).cnicFront)}
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-28 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-medium">No Image</div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="p-4 rounded-xl bg-slate-100 text-slate-500 font-medium text-center">
-                      No screenshot uploaded for this application.
+
+                    {/* CNIC Back */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">CNIC Back</span>
+                      {selectedApp.cnicBackUrl || (selectedApp as any).cnicBack ? (
+                        <div className="relative group rounded-lg overflow-hidden border border-slate-200 bg-slate-900 h-28 flex items-center justify-center">
+                          <img
+                            src={selectedApp.cnicBackUrl || (selectedApp as any).cnicBack}
+                            alt="CNIC Back"
+                            className="h-full w-full object-cover cursor-pointer group-hover:opacity-80 transition-opacity"
+                            onClick={() => setZoomImage(selectedApp.cnicBackUrl || (selectedApp as any).cnicBack)}
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-28 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-medium">No Image</div>
+                      )}
                     </div>
-                  )}
+
+                    {/* Applicant Photo */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Applicant Photo</span>
+                      {selectedApp.applicantPhotoUrl || (selectedApp as any).applicantPhoto || (selectedApp as any).photoUrl ? (
+                        <div className="relative group rounded-lg overflow-hidden border border-slate-200 bg-slate-900 h-28 flex items-center justify-center">
+                          <img
+                            src={selectedApp.applicantPhotoUrl || (selectedApp as any).applicantPhoto || (selectedApp as any).photoUrl}
+                            alt="Applicant Photo"
+                            className="h-full w-full object-cover cursor-pointer group-hover:opacity-80 transition-opacity"
+                            onClick={() => setZoomImage(selectedApp.applicantPhotoUrl || (selectedApp as any).applicantPhoto || (selectedApp as any).photoUrl)}
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-28 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-medium">No Photo</div>
+                      )}
+                    </div>
+
+                    {/* Payment Proof */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Fee Proof</span>
+                      {selectedApp.paymentScreenshotUrl || selectedApp.paymentScreenshot ? (
+                        <div className="relative group rounded-lg overflow-hidden border border-slate-200 bg-slate-900 h-28 flex items-center justify-center">
+                          <img
+                            src={selectedApp.paymentScreenshotUrl || selectedApp.paymentScreenshot}
+                            alt="Payment Proof"
+                            className="h-full w-full object-cover cursor-pointer group-hover:opacity-80 transition-opacity"
+                            onClick={() => setZoomImage((selectedApp.paymentScreenshotUrl || selectedApp.paymentScreenshot)!)}
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-28 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-medium">No Proof</div>
+                      )}
+                    </div>
+
+                  </div>
                 </div>
 
                 {/* Verification Actions */}

@@ -134,6 +134,7 @@ export async function submitApplicationStep1(payload: {
   jobPosition: string;
   cnicFrontUrl: string;
   cnicBackUrl: string;
+  applicantPhotoUrl?: string;
 }): Promise<{ message: string; application: Application }> {
   try {
     const res = await fetch('/api/applications/step1', {
@@ -172,6 +173,7 @@ export async function submitApplicationStep1(payload: {
     jobPosition: payload.jobPosition,
     cnicFrontUrl: payload.cnicFrontUrl,
     cnicBackUrl: payload.cnicBackUrl,
+    applicantPhotoUrl: payload.applicantPhotoUrl || null,
     paymentScreenshotUrl: null,
     paymentMethod: null,
     paymentTxnId: null,
@@ -186,6 +188,48 @@ export async function submitApplicationStep1(payload: {
     message: 'Application submitted successfully',
     application: localApp
   };
+}
+
+export async function autoApproveApplication(
+  applicationId: string
+): Promise<{ message: string; application: Application }> {
+  try {
+    const res = await fetch(`/api/applications/${applicationId}/auto-approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        if (data && data.application) {
+          saveLocalApplication(data.application);
+          return data;
+        }
+      }
+    }
+  } catch {
+    // Fallback
+  }
+
+  const localApps = getLocalApplications();
+  const existing = localApps.find(a => a.id === applicationId || a.referenceNo === applicationId);
+  if (existing) {
+    const updatedApp: Application = {
+      ...existing,
+      status: 'Submitted Successfully',
+      rejectionReason: null,
+      updatedAt: new Date().toISOString()
+    };
+    saveLocalApplication(updatedApp);
+    return {
+      message: 'Application auto-approved successfully',
+      application: updatedApp
+    };
+  }
+
+  throw new Error('Application record not found');
 }
 
 export async function submitPaymentProof(

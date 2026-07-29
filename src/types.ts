@@ -32,6 +32,7 @@ export interface Application {
   jobId?: string | null;
   cnicFrontUrl: string;
   cnicBackUrl: string;
+  applicantPhotoUrl?: string | null;
   paymentScreenshotUrl: string | null;
   paymentMethod: 'JazzCash' | 'Easypaisa' | null;
   paymentTxnId?: string | null;

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { SystemSettings, Application, JobPosition } from '../types.js';
-import { submitApplicationStep1, submitPaymentProof, uploadImageFile, fetchApplicationById } from '../services/api.js';
+import { submitApplicationStep1, submitPaymentProof, uploadImageFile, fetchApplicationById, autoApproveApplication } from '../services/api.js';
 import { isJobUnlocked, QUALIFICATION_CATEGORIES } from '../utils/qualification.js';
-import { X, CheckCircle2, User, Mail, Phone, MapPin, GraduationCap, FileText, Upload, Copy, Check, Clock, ShieldCheck, Printer, AlertTriangle, ArrowRight, ArrowLeft, RefreshCw, Sparkles, Building, Briefcase } from 'lucide-react';
+import { X, CheckCircle2, User, Mail, Phone, MapPin, GraduationCap, FileText, Upload, Copy, Check, Clock, ShieldCheck, Printer, AlertTriangle, ArrowRight, ArrowLeft, RefreshCw, Sparkles, Building, Briefcase, Camera } from 'lucide-react';
 
 interface ApplicationWizardProps {
   isOpen: boolean;
@@ -61,6 +61,8 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
   const [cnicFrontPreview, setCnicFrontPreview] = useState<string | null>(null);
   const [cnicBackFile, setCnicBackFile] = useState<File | null>(null);
   const [cnicBackPreview, setCnicBackPreview] = useState<string | null>(null);
+  const [applicantPhotoFile, setApplicantPhotoFile] = useState<File | null>(null);
+  const [applicantPhotoPreview, setApplicantPhotoPreview] = useState<string | null>(null);
 
   // Validation Errors
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -77,7 +79,9 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
   // Copy Feedback
   const [copiedAccount, setCopiedAccount] = useState(false);
 
-  // Poll status when in Step 3
+  // Step 3 30-Second Countdown Auto Approval
+  const [countdown, setCountdown] = useState<number>(30);
+  const [autoApproving, setAutoApproving] = useState<boolean>(false);
   const [pollingStatus, setPollingStatus] = useState(false);
 
   useEffect(() => {
@@ -97,7 +101,7 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
     }
   }, [initialPosition, initialQualification]);
 
-  // When qualification changes, check if jobPosition is still unlocked. If not, auto-select first unlocked job
+  // When qualification changes, check if jobPosition is still unlocked
   useEffect(() => {
     if (!jobs || jobs.length === 0) return;
     const available = jobs.filter(j => isJobUnlocked(qualification, j.minQualification));
@@ -110,6 +114,48 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
       setJobPosition(jobs[0].title);
     }
   }, [qualification, jobs]);
+
+  // Step 3 30-Second Timer
+  useEffect(() => {
+    let timer: any = null;
+    if (currentStep === 3) {
+      setCountdown(30);
+      timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      setCountdown(30);
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [currentStep]);
+
+  // Trigger Auto-Approval when countdown reaches 0
+  useEffect(() => {
+    if (currentStep === 3 && countdown === 0 && submittedApp && !autoApproving) {
+      const runAutoApproval = async () => {
+        setAutoApproving(true);
+        try {
+          const res = await autoApproveApplication(submittedApp.id);
+          setSubmittedApp(res.application);
+        } catch (err) {
+          console.error('Auto approval error:', err);
+        } finally {
+          setAutoApproving(false);
+          setCurrentStep(4);
+        }
+      };
+      runAutoApproval();
+    }
+  }, [currentStep, countdown, submittedApp, autoApproving]);
 
   if (!isOpen) return null;
 
@@ -161,6 +207,9 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
     if (!cnicBackPreview && !cnicBackFile) {
       errors.cnicBack = 'CNIC Back picture upload is required.';
     }
+    if (!applicantPhotoPreview && !applicantPhotoFile) {
+      errors.applicantPhoto = 'Applicant photo upload is required.';
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -179,12 +228,16 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
     try {
       let cnicFrontUrl = cnicFrontPreview || '';
       let cnicBackUrl = cnicBackPreview || '';
+      let applicantPhotoUrl = applicantPhotoPreview || '';
 
       if (cnicFrontFile) {
         cnicFrontUrl = await uploadImageFile(cnicFrontFile);
       }
       if (cnicBackFile) {
         cnicBackUrl = await uploadImageFile(cnicBackFile);
+      }
+      if (applicantPhotoFile) {
+        applicantPhotoUrl = await uploadImageFile(applicantPhotoFile);
       }
 
       const res = await submitApplicationStep1({
@@ -198,7 +251,8 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
         postalCode,
         jobPosition,
         cnicFrontUrl,
-        cnicBackUrl
+        cnicBackUrl,
+        applicantPhotoUrl
       });
 
       setSubmittedApp(res.application);
@@ -627,15 +681,15 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
 
                   {/* Document Uploads Dropzone */}
                   <div className="space-y-3 pt-2">
-                    <p className="text-xs font-bold text-slate-700 uppercase tracking-wide">CNIC Documents Upload *</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <p className="text-xs font-bold text-slate-700 uppercase tracking-wide">CNIC & Candidate Photo Uploads *</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       
                       {/* CNIC Front */}
                       <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative">
                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mb-2 text-blue-600">
                           <Upload className="w-4 h-4" />
                         </div>
-                        <p className="text-[11px] font-semibold text-slate-700">CNIC Front Image Upload *</p>
+                        <p className="text-[11px] font-semibold text-slate-700">CNIC Front Image *</p>
                         <p className="text-[9px] text-slate-400 mt-0.5">JPG, PNG up to 5MB</p>
                         <input
                           type="file"
@@ -663,7 +717,7 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mb-2 text-blue-600">
                           <Upload className="w-4 h-4" />
                         </div>
-                        <p className="text-[11px] font-semibold text-slate-700">CNIC Back Image Upload *</p>
+                        <p className="text-[11px] font-semibold text-slate-700">CNIC Back Image *</p>
                         <p className="text-[9px] text-slate-400 mt-0.5">JPG, PNG up to 5MB</p>
                         <input
                           type="file"
@@ -684,6 +738,34 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                           </div>
                         )}
                         {formErrors.cnicBack && <p className="text-[11px] text-rose-600 mt-1">{formErrors.cnicBack}</p>}
+                      </div>
+
+                      {/* Applicant Photo */}
+                      <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mb-2 text-blue-600">
+                          <Camera className="w-4 h-4" />
+                        </div>
+                        <p className="text-[11px] font-semibold text-slate-700">Applicant Photo *</p>
+                        <p className="text-[9px] text-slate-400 mt-0.5">Passport style photo</p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const file = e.target.files[0];
+                              setApplicantPhotoFile(file);
+                              setApplicantPhotoPreview(URL.createObjectURL(file));
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        {applicantPhotoPreview && (
+                          <div className="mt-2 w-full">
+                            <img src={applicantPhotoPreview} alt="Photo Preview" className="h-20 w-full object-cover rounded border" />
+                            <span className="text-[10px] text-emerald-600 font-bold block text-center mt-1">Photo Loaded ✓</span>
+                          </div>
+                        )}
+                        {formErrors.applicantPhoto && <p className="text-[11px] text-rose-600 mt-1">{formErrors.applicantPhoto}</p>}
                       </div>
 
                     </div>
@@ -894,23 +976,24 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
               </div>
             )}
 
-            {/* ================= STEP 3: PAYMENT VERIFICATION PENDING ================= */}
+            {/* ================= STEP 3: AUTOMATIC APPROVAL IN PROGRESS ================= */}
             {currentStep === 3 && (
               <div className="max-w-xl mx-auto text-center py-8 space-y-6">
                 
-                <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto ring-8 ring-amber-50">
-                  <Clock className="w-8 h-8 animate-pulse" />
+                <div className="w-24 h-24 rounded-full bg-blue-600 text-white flex flex-col items-center justify-center mx-auto ring-8 ring-blue-100 shadow-xl animate-pulse">
+                  <span className="text-3xl font-black">{countdown}</span>
+                  <span className="text-[9px] uppercase font-bold text-blue-200">Seconds</span>
                 </div>
 
                 <div>
-                  <span className="inline-block px-3.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold mb-2">
-                    Payment Verification Pending
+                  <span className="inline-block px-3.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-extrabold mb-2">
+                    Auto Approval in Progress
                   </span>
                   <h2 className="text-xl font-bold text-slate-900 tracking-tight leading-snug">
-                    Your payment proof has been submitted successfully and is now pending admin verification.
+                    Your complete application &amp; fee payment are being automatically approved.
                   </h2>
                   <p className="text-slate-500 text-xs sm:text-sm mt-2 leading-relaxed">
-                    Our administrative audit team is reviewing your payment receipt and application details. Once approved, your official Application Slip will be generated.
+                    Please wait while our automated system verifies your submitted documents and payment details. You will be redirected to your official roll number slip upon completion.
                   </p>
                 </div>
 
@@ -935,12 +1018,24 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
 
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
-                    onClick={handleCheckStatus}
-                    disabled={pollingStatus}
+                    onClick={async () => {
+                      if (!submittedApp) return;
+                      setPollingStatus(true);
+                      try {
+                        const res = await autoApproveApplication(submittedApp.id);
+                        setSubmittedApp(res.application);
+                        setCurrentStep(4);
+                      } catch (err) {
+                        console.error(err);
+                      } finally {
+                        setPollingStatus(false);
+                      }
+                    }}
+                    disabled={pollingStatus || autoApproving}
                     className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${pollingStatus ? 'animate-spin' : ''}`} />
-                    <span>Check Verification Status</span>
+                    <RefreshCw className={`w-3.5 h-3.5 ${pollingStatus || autoApproving ? 'animate-spin' : ''}`} />
+                    <span>Approve Now Immediately</span>
                   </button>
 
                   <button

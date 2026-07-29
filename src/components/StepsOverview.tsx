@@ -133,8 +133,9 @@ export const StepsOverview: React.FC<StepsOverviewProps> = ({ onOpenApply, appFe
               </ul>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-amber-700 font-semibold">
-              Verified manually by staff
+            <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Auto Approval</span>
             </div>
           </div>
 

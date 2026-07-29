@@ -324,7 +324,8 @@ app.post('/api/applications/step1', (req: Request, res: Response) => {
     postalCode,
     jobPosition,
     cnicFrontUrl,
-    cnicBackUrl
+    cnicBackUrl,
+    applicantPhotoUrl
   } = req.body;
 
   // Validation
@@ -399,6 +400,7 @@ app.post('/api/applications/step1', (req: Request, res: Response) => {
     existing.jobPosition = jobPosition || existing.jobPosition || 'General Application';
     existing.cnicFrontUrl = cnicFrontUrl;
     existing.cnicBackUrl = cnicBackUrl;
+    if (applicantPhotoUrl) existing.applicantPhotoUrl = applicantPhotoUrl;
     existing.updatedAt = now;
     if (existing.status === 'Information Incomplete') {
       existing.status = 'Payment Pending';
@@ -423,6 +425,7 @@ app.post('/api/applications/step1', (req: Request, res: Response) => {
       jobPosition: jobPosition || 'General Application',
       cnicFrontUrl,
       cnicBackUrl,
+      applicantPhotoUrl: applicantPhotoUrl || null,
       paymentScreenshotUrl: null,
       paymentMethod: null,
       paymentTxnId: null,
@@ -468,6 +471,28 @@ app.post('/api/applications/:id/payment', (req: Request, res: Response) => {
 
   res.json({
     message: 'Your payment screenshot has been uploaded and submitted for admin verification.',
+    application: appRecord
+  });
+});
+
+// Auto-Approve Application after timer completes
+app.post('/api/applications/:id/auto-approve', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const db = getDB();
+  const appIndex = db.applications.findIndex(a => a.id === id || a.referenceNo === id);
+  if (appIndex === -1) {
+    return res.status(404).json({ error: 'Application not found.' });
+  }
+
+  const appRecord = db.applications[appIndex];
+  appRecord.status = 'Submitted Successfully';
+  appRecord.rejectionReason = null;
+  appRecord.updatedAt = new Date().toISOString();
+
+  saveDB(db);
+
+  res.json({
+    message: 'Application auto-approved successfully.',
     application: appRecord
   });
 });

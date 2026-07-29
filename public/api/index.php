@@ -267,6 +267,7 @@ if ($path === 'applications/step1' && $method === 'POST') {
     $jobPosition = trim($body['jobPosition'] ?? 'General Application');
     $cnicFrontUrl = trim($body['cnicFrontUrl'] ?? '');
     $cnicBackUrl = trim($body['cnicBackUrl'] ?? '');
+    $applicantPhotoUrl = trim($body['applicantPhotoUrl'] ?? '');
 
     if (!$fullName || !$fatherName || !cleanCNIC($cnic) || strlen(cleanCNIC($cnic)) !== 13 || !$email || !$mobile || !$qualification || !$address || !$postalCode || !$cnicFrontUrl || !$cnicBackUrl) {
         http_response_code(400);
@@ -297,6 +298,7 @@ if ($path === 'applications/step1' && $method === 'POST') {
             $apps[$existingIndex]['postalCode'] = $postalCode;
             $apps[$existingIndex]['cnicFrontUrl'] = $cnicFrontUrl;
             $apps[$existingIndex]['cnicBackUrl'] = $cnicBackUrl;
+            if ($applicantPhotoUrl) $apps[$existingIndex]['applicantPhotoUrl'] = $applicantPhotoUrl;
             $apps[$existingIndex]['updatedAt'] = $now;
             if (($apps[$existingIndex]['status'] ?? '') === 'Information Incomplete') {
                 $apps[$existingIndex]['status'] = 'Payment Pending';
@@ -318,6 +320,7 @@ if ($path === 'applications/step1' && $method === 'POST') {
                 'jobPosition' => $jobPosition,
                 'cnicFrontUrl' => $cnicFrontUrl,
                 'cnicBackUrl' => $cnicBackUrl,
+                'applicantPhotoUrl' => $applicantPhotoUrl ?: null,
                 'paymentScreenshotUrl' => null,
                 'paymentMethod' => null,
                 'paymentTxnId' => null,
@@ -340,8 +343,8 @@ if ($path === 'applications/step1' && $method === 'POST') {
     $existing = $stmt->fetch();
 
     if ($existing) {
-        $updateStmt = $pdo->prepare("UPDATE applications SET full_name = ?, father_name = ?, email = ?, mobile = ?, qualification = ?, address = ?, postal_code = ?, cnic_front_url = ?, cnic_back_url = ?, status = 'Payment Pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-        $updateStmt->execute([$fullName, $fatherName, $email, $mobile, $qualification, $address, $postalCode, $cnicFrontUrl, $cnicBackUrl, $existing['id']]);
+        $updateStmt = $pdo->prepare("UPDATE applications SET full_name = ?, father_name = ?, email = ?, mobile = ?, qualification = ?, address = ?, postal_code = ?, cnic_front_url = ?, cnic_back_url = ?, applicant_photo_url = ?, status = 'Payment Pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+        $updateStmt->execute([$fullName, $fatherName, $email, $mobile, $qualification, $address, $postalCode, $cnicFrontUrl, $cnicBackUrl, $applicantPhotoUrl, $existing['id']]);
         $existing['fullName'] = $fullName;
         $existing['fatherName'] = $fatherName;
         $existing['cnic'] = $formattedCNIC;
@@ -353,13 +356,14 @@ if ($path === 'applications/step1' && $method === 'POST') {
         $existing['jobPosition'] = $jobPosition;
         $existing['cnicFrontUrl'] = $cnicFrontUrl;
         $existing['cnicBackUrl'] = $cnicBackUrl;
+        $existing['applicantPhotoUrl'] = $applicantPhotoUrl;
         $existing['status'] = 'Payment Pending';
         echo json_encode(['message' => 'Application information updated successfully.', 'application' => $existing]);
     } else {
         $appId = 'app-' . time() . '-' . bin2hex(random_bytes(3));
         $ref = 'JHO-' . date('Y') . '-' . rand(10000, 99999);
-        $insertStmt = $pdo->prepare("INSERT INTO applications (id, reference_no, full_name, father_name, cnic, email, mobile, qualification, address, postal_code, job_position, cnic_front_url, cnic_back_url, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Payment Pending')");
-        $insertStmt->execute([$appId, $ref, $fullName, $fatherName, $formattedCNIC, $email, $mobile, $qualification, $address, $postalCode, $jobPosition, $cnicFrontUrl, $cnicBackUrl]);
+        $insertStmt = $pdo->prepare("INSERT INTO applications (id, reference_no, full_name, father_name, cnic, email, mobile, qualification, address, postal_code, job_position, cnic_front_url, cnic_back_url, applicant_photo_url, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Payment Pending')");
+        $insertStmt->execute([$appId, $ref, $fullName, $fatherName, $formattedCNIC, $email, $mobile, $qualification, $address, $postalCode, $jobPosition, $cnicFrontUrl, $cnicBackUrl, $applicantPhotoUrl]);
         
         $appRecord = [
             'id' => $appId,
@@ -375,6 +379,7 @@ if ($path === 'applications/step1' && $method === 'POST') {
             'jobPosition' => $jobPosition,
             'cnicFrontUrl' => $cnicFrontUrl,
             'cnicBackUrl' => $cnicBackUrl,
+            'applicantPhotoUrl' => $applicantPhotoUrl ?: null,
             'paymentScreenshotUrl' => null,
             'paymentMethod' => null,
             'paymentTxnId' => null,
@@ -443,6 +448,56 @@ if (preg_match('#^applications/([^/]+)/payment$#', $path, $m) && $method === 'PO
         $appRecord['paymentTxnId'] = $appRecord['payment_txn_id'];
         $appRecord['rejectionReason'] = $appRecord['rejection_reason'];
         echo json_encode(['message' => 'Payment screenshot submitted for verification.', 'application' => $appRecord]);
+    } else {
+        http_response_code(404);
+        echo json_encode(['error' => 'Application not found.']);
+    }
+    exit();
+}
+
+// 6b. Auto Approve Application
+if (preg_match('#^applications/([^/]+)/auto-approve$#', $path, $m) && $method === 'POST') {
+    $id = $m[1];
+    if (DB::isJsonFallback()) {
+        $json = DB::getJsonData();
+        $apps = $json['applications'] ?? [];
+        foreach ($apps as &$a) {
+            if ($a['id'] === $id || $a['referenceNo'] === $id) {
+                $a['status'] = 'Submitted Successfully';
+                $a['rejectionReason'] = null;
+                $a['updatedAt'] = date('c');
+                $json['applications'] = $apps;
+                DB::saveJsonData($json);
+                echo json_encode(['message' => 'Application auto-approved successfully.', 'application' => $a]);
+                exit();
+            }
+        }
+        http_response_code(404);
+        echo json_encode(['error' => 'Application not found.']);
+        exit();
+    }
+
+    $pdo = DB::getConnection();
+    $stmt = $pdo->prepare("UPDATE applications SET status = 'Submitted Successfully', rejection_reason = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? OR reference_no = ?");
+    $stmt->execute([$id, $id]);
+
+    $fetchStmt = $pdo->prepare("SELECT * FROM applications WHERE id = ? OR reference_no = ?");
+    $fetchStmt->execute([$id, $id]);
+    $appRecord = $fetchStmt->fetch();
+    if ($appRecord) {
+        $appRecord['fullName'] = $appRecord['full_name'];
+        $appRecord['fatherName'] = $appRecord['father_name'];
+        $appRecord['referenceNo'] = $appRecord['reference_no'];
+        $appRecord['postalCode'] = $appRecord['postal_code'];
+        $appRecord['jobPosition'] = $appRecord['job_position'];
+        $appRecord['cnicFrontUrl'] = $appRecord['cnic_front_url'];
+        $appRecord['cnicBackUrl'] = $appRecord['cnic_back_url'];
+        $appRecord['applicantPhotoUrl'] = $appRecord['applicant_photo_url'] ?? null;
+        $appRecord['paymentScreenshotUrl'] = $appRecord['payment_screenshot_url'];
+        $appRecord['paymentMethod'] = $appRecord['payment_method'];
+        $appRecord['paymentTxnId'] = $appRecord['payment_txn_id'];
+        $appRecord['rejectionReason'] = $appRecord['rejection_reason'];
+        echo json_encode(['message' => 'Application auto-approved successfully.', 'application' => $appRecord]);
     } else {
         http_response_code(404);
         echo json_encode(['error' => 'Application not found.']);
