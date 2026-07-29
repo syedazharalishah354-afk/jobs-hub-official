@@ -136,7 +136,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
       loadSettings();
       loadAdminJobs();
     }
-  }, [token, selectedStatusFilter]);
+  }, [token, selectedStatusFilter, searchQuery]);
 
   const loadAdminJobs = async () => {
     if (!token) return;
@@ -835,22 +835,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                             applications.map((app) => (
                               <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
                                 <td className="p-3 font-mono">
-                                  <div className="font-bold text-blue-900">{app.rollNumber || app.id.slice(0, 8)}</div>
+                                  <div className="font-bold text-blue-900">{app.rollNumber || app.referenceNo || app.id?.slice(0, 8)}</div>
                                   <div className="text-[10px] text-slate-400">
-                                    {new Date(app.createdAt).toLocaleDateString()}
+                                    {app.createdAt || app.appliedAt ? new Date(app.createdAt || app.appliedAt!).toLocaleDateString() : 'N/A'}
                                   </div>
                                 </td>
                                 <td className="p-3">
-                                  <div className="font-bold text-slate-900">{app.candidateName}</div>
-                                  <div className="text-[10px] text-slate-500">CNIC: {app.cnic}</div>
-                                  <div className="text-[10px] text-slate-500">Mobile: {app.mobileNumber}</div>
+                                  <div className="font-bold text-slate-900">{app.candidateName || app.fullName || 'N/A'}</div>
+                                  <div className="text-[10px] text-slate-500">CNIC: {app.cnic || 'N/A'}</div>
+                                  <div className="text-[10px] text-slate-500">Mobile: {app.mobileNumber || app.mobile || 'N/A'}</div>
                                 </td>
                                 <td className="p-3 font-medium text-slate-800">
-                                  {app.jobTitle}
+                                  {app.jobTitle || app.jobPosition || 'General Application'}
                                 </td>
                                 <td className="p-3">
-                                  <div className="font-bold capitalize text-slate-800">{app.paymentMethod}</div>
-                                  <div className="text-[10px] text-slate-500">TRX: {app.transactionId}</div>
+                                  <div className="font-bold capitalize text-slate-800">{app.paymentMethod || 'JazzCash / EasyPaisa'}</div>
+                                  <div className="text-[10px] text-slate-500">TRX: {app.transactionId || app.paymentTxnId || app.trxId || 'Pending'}</div>
                                 </td>
                                 <td className="p-3">
                                   {app.paymentStatus === 'approved' && (
