@@ -13,6 +13,7 @@ import { Footer } from './components/Footer.js';
 import { SystemSettings, JobPosition, Application } from './types.js';
 import { fetchConfig, fetchJobs } from './services/api.js';
 import { JOB_CAMPAIGNS, getCampaignBySlug } from './constants/campaigns.js';
+import { safeGetLocalStorage, safeRemoveLocalStorage } from './utils/storage.js';
 import { HelpCircle, ChevronDown, Sparkles, Filter, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function App() {
@@ -35,7 +36,7 @@ export default function App() {
   const [activeCampaignSlug, setActiveCampaignSlug] = useState<string>('all');
 
   // Admin session state
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(!!localStorage.getItem('admin_token'));
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => !!safeGetLocalStorage('admin_token'));
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
 
   // Modals state
@@ -83,7 +84,7 @@ export default function App() {
                       search.indexOf('admin') !== -1;
 
       if (isAdmin) {
-        if (localStorage.getItem('admin_token')) {
+        if (safeGetLocalStorage('admin_token')) {
           setIsAdminOpen(true);
         } else {
           setIsAdminLoginOpen(true);
@@ -109,7 +110,7 @@ export default function App() {
   }, []);
 
   const checkAdminSession = async () => {
-    const token = localStorage.getItem('admin_token');
+    const token = safeGetLocalStorage('admin_token');
     if (!token) {
       setIsAdminLoggedIn(false);
       return;
@@ -121,7 +122,7 @@ export default function App() {
       if (res.ok) {
         setIsAdminLoggedIn(true);
       } else {
-        localStorage.removeItem('admin_token');
+        safeRemoveLocalStorage('admin_token');
         setIsAdminLoggedIn(false);
       }
     } catch {
@@ -136,8 +137,12 @@ export default function App() {
         fetchConfig(),
         fetchJobs(campaignSlug)
       ]);
-      setConfig(confData);
-      setJobs(jobsData);
+      if (confData && typeof confData === 'object') {
+        setConfig(confData);
+      }
+      if (Array.isArray(jobsData)) {
+        setJobs(jobsData);
+      }
     } catch (err) {
       console.error('Error loading config or jobs:', err);
     } finally {
@@ -163,14 +168,14 @@ export default function App() {
   };
 
   const handleAdminLogout = () => {
-    localStorage.removeItem('admin_token');
+    safeRemoveLocalStorage('admin_token');
     setIsAdminLoggedIn(false);
     setIsAdminOpen(false);
   };
 
   const handleOpenApply = (positionName?: string, qualification?: string) => {
     setSelectedJobTitle(positionName);
-    setSelectedJobQualification(qualification || localStorage.getItem('user_qualification') || 'Matric');
+    setSelectedJobQualification(qualification || safeGetLocalStorage('user_qualification') || 'Matric');
     setIsApplyOpen(true);
   };
 

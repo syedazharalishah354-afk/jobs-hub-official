@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SystemSettings, Application, ApplicationStats, JobPosition } from '../types.js';
 import { QUALIFICATION_CATEGORIES, getMinQualificationRank, getQualificationRank } from '../utils/qualification.js';
 import { JOB_CAMPAIGNS, getCampaignUrl } from '../constants/campaigns.js';
+import { safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage } from '../utils/storage.js';
 import {
   adminLogin,
   fetchAdminStats,
@@ -66,7 +67,7 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefreshConfig }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('admin_token'));
+  const [token, setToken] = useState<string | null>(() => safeGetLocalStorage('admin_token'));
   const [adminUsername, setAdminUsername] = useState<string>('umar');
 
   // Login Form State

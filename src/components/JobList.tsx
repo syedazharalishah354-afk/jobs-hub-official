@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { JobPosition } from '../types.js';
+import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/storage.js';
 import {
   QUALIFICATION_CATEGORIES,
   isJobUnlocked,
@@ -32,9 +33,11 @@ interface JobListProps {
 }
 
 export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
+  const safeJobs = Array.isArray(jobs) ? jobs : [];
+
   // Store user's selected qualification in state & localStorage
   const [selectedQualification, setSelectedQualification] = useState<string>(() => {
-    return localStorage.getItem('user_qualification') || 'Matric';
+    return safeGetLocalStorage('user_qualification') || 'Matric';
   });
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,20 +51,20 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
 
   // Extract unique categories, locations, and job types
   const availableCategories = Array.from(
-    new Set(jobs.map(j => j.category).filter((c): c is string => Boolean(c)))
+    new Set(safeJobs.map(j => j.category).filter((c): c is string => Boolean(c)))
   ).sort();
 
   const availableLocations = Array.from(
-    new Set(jobs.map(j => j.location).filter((l): l is string => Boolean(l)))
+    new Set(safeJobs.map(j => j.location).filter((l): l is string => Boolean(l)))
   ).sort();
 
   const availableJobTypes = Array.from(
-    new Set(jobs.map(j => j.jobType).filter((t): t is string => Boolean(t)))
+    new Set(safeJobs.map(j => j.jobType).filter((t): t is string => Boolean(t)))
   ).sort();
 
   // Sync selection to localStorage
   useEffect(() => {
-    localStorage.setItem('user_qualification', selectedQualification);
+    safeSetLocalStorage('user_qualification', selectedQualification);
   }, [selectedQualification]);
 
   // Reset pagination when search/filter options change
@@ -72,7 +75,7 @@ export const JobList: React.FC<JobListProps> = ({ jobs, onApplyPosition }) => {
   const unlockInfo = getQualificationUnlockMessage(selectedQualification);
 
   // Filter jobs by search, category, location, job type, and unlock status
-  const processedJobs = jobs.map(job => ({
+  const processedJobs = safeJobs.map(job => ({
     ...job,
     unlocked: isJobUnlocked(selectedQualification, job.minQualification)
   }));

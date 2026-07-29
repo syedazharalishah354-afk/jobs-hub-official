@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SystemSettings, Application, JobPosition } from '../types.js';
 import { submitApplicationStep1, submitPaymentProof, uploadImageFile, fetchApplicationById, autoApproveApplication } from '../services/api.js';
 import { isJobUnlocked, QUALIFICATION_CATEGORIES } from '../utils/qualification.js';
+import { safeGetLocalStorage, safeSetLocalStorage } from '../utils/storage.js';
 import { X, CheckCircle2, User, Mail, Phone, MapPin, GraduationCap, FileText, Upload, Copy, Check, Clock, ShieldCheck, Printer, AlertTriangle, ArrowRight, ArrowLeft, RefreshCw, Sparkles, Building, Briefcase, Camera } from 'lucide-react';
 
 interface ApplicationWizardProps {
@@ -31,7 +32,7 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
 
   // Form Fields for Step 1
   const [qualification, setQualification] = useState<string>(() => {
-    return initialQualification || localStorage.getItem('user_qualification') || 'Matric';
+    return initialQualification || safeGetLocalStorage('user_qualification') || 'Matric';
   });
 
   // Ensure jobs list exists
@@ -494,7 +495,7 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                         onChange={(e) => {
                           const newQual = e.target.value;
                           setQualification(newQual);
-                          localStorage.setItem('user_qualification', newQual);
+                          safeSetLocalStorage('user_qualification', newQual);
                         }}
                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
                       >
