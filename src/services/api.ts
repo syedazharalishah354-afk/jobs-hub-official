@@ -10,11 +10,21 @@ export function normalizeApplication(a: any): Application {
   const jobPosition = a.jobPosition || a.jobTitle || 'General Application';
   const referenceNo = a.referenceNo || a.rollNumber || a.id || '';
   const paymentScreenshotUrl = a.paymentScreenshotUrl || a.paymentScreenshot || null;
-  const paymentTxnId = a.paymentTxnId || a.trxId || null;
+  const paymentTxnId = a.paymentTxnId || a.trxId || a.transactionId || null;
   const createdAt = a.createdAt || a.appliedAt || new Date().toISOString();
   const cnicFrontUrl = a.cnicFrontUrl || a.cnicFront || '';
   const cnicBackUrl = a.cnicBackUrl || a.cnicBack || '';
   const applicantPhotoUrl = a.applicantPhotoUrl || a.applicantPhoto || a.photoUrl || null;
+  const status = a.status || 'Payment Pending';
+
+  let paymentStatus = a.paymentStatus || 'pending';
+  if (status === 'Payment Approved' || status === 'Submitted Successfully' || a.paymentStatus === 'approved') {
+    paymentStatus = 'approved';
+  } else if (status === 'Payment Rejected' || a.paymentStatus === 'rejected') {
+    paymentStatus = 'rejected';
+  } else {
+    paymentStatus = 'pending';
+  }
 
   return {
     ...a,
@@ -47,7 +57,9 @@ export function normalizeApplication(a: any): Application {
     paymentMethod: a.paymentMethod || null,
     paymentTxnId,
     trxId: paymentTxnId,
-    status: a.status || 'Payment Pending',
+    transactionId: paymentTxnId,
+    status,
+    paymentStatus,
     rejectionReason: a.rejectionReason || null,
     createdAt,
     appliedAt: createdAt,

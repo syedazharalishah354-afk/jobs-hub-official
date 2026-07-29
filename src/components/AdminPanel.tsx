@@ -55,7 +55,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Layers,
-  Sparkles
+  Sparkles,
+  Download
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -1441,103 +1442,159 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                 </button>
               </div>
 
-              <div className="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
+              <div className="p-6 space-y-5 text-xs max-h-[85vh] overflow-y-auto">
                 
-                <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                  <div>
-                    <span className="text-slate-400 block font-bold text-[10px] uppercase">Candidate Name</span>
-                    <span className="font-extrabold text-slate-900 text-sm">{selectedApp.candidateName}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block font-bold text-[10px] uppercase">Father Name</span>
-                    <span className="font-bold text-slate-800">{selectedApp.fatherName}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block font-bold text-[10px] uppercase">CNIC Number</span>
-                    <span className="font-mono font-bold text-blue-900">{selectedApp.cnic}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block font-bold text-[10px] uppercase">Mobile Number</span>
-                    <span className="font-mono font-bold text-slate-800">{selectedApp.mobileNumber}</span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-slate-400 block font-bold text-[10px] uppercase">Applied Job Position</span>
-                    <span className="font-extrabold text-blue-900 text-xs">{selectedApp.jobTitle}</span>
+                {/* Applicant Summary Information Grid */}
+                <div>
+                  <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wide mb-2.5 flex items-center justify-between">
+                    <span>Candidate Information</span>
+                    <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                      ID: {selectedApp.rollNumber || selectedApp.referenceNo || selectedApp.id}
+                    </span>
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Full Name</span>
+                      <span className="font-extrabold text-slate-900 text-sm">{selectedApp.fullName || selectedApp.candidateName || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Father's Name</span>
+                      <span className="font-bold text-slate-800 text-xs">{selectedApp.fatherName || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">CNIC Number</span>
+                      <span className="font-mono font-bold text-blue-900 text-xs">{selectedApp.cnic || 'N/A'}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Date of Birth</span>
+                      <span className="font-semibold text-slate-800 text-xs">{selectedApp.dob || (selectedApp as any).dateOfBirth || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Gender</span>
+                      <span className="font-semibold text-slate-800 text-xs">{selectedApp.gender || 'Male'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Mobile Number</span>
+                      <span className="font-mono font-bold text-slate-800 text-xs">{selectedApp.mobile || selectedApp.mobileNumber || 'N/A'}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">WhatsApp Number</span>
+                      <span className="font-mono font-bold text-slate-800 text-xs">{selectedApp.whatsapp || selectedApp.mobile || selectedApp.mobileNumber || 'N/A'}</span>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Email Address</span>
+                      <span className="font-semibold text-slate-800 text-xs">{selectedApp.email || 'N/A'}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Highest Qualification</span>
+                      <span className="font-bold text-slate-800 text-xs">{selectedApp.qualification || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Job Category</span>
+                      <span className="font-bold text-slate-700 text-xs">{selectedApp.jobCategory || (selectedApp as any).category || 'General'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Application Date &amp; Time</span>
+                      <span className="font-semibold text-slate-800 text-[11px]">{selectedApp.createdAt || selectedApp.appliedAt ? new Date(selectedApp.createdAt || selectedApp.appliedAt!).toLocaleString() : 'N/A'}</span>
+                    </div>
+
+                    <div className="sm:col-span-2 lg:col-span-3">
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Applied Job Position</span>
+                      <span className="font-extrabold text-blue-900 text-xs">{selectedApp.jobPosition || selectedApp.jobTitle || 'General Application'}</span>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Complete Address</span>
+                      <span className="font-medium text-slate-800 text-xs">{selectedApp.address || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">City &amp; Province</span>
+                      <span className="font-semibold text-slate-800 text-xs">
+                        {[selectedApp.city, selectedApp.province, selectedApp.postalCode].filter(Boolean).join(', ') || 'N/A'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Payment Method</span>
+                      <span className="font-bold text-slate-800 text-xs">{selectedApp.paymentMethod || 'JazzCash / EasyPaisa'}</span>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <span className="text-slate-400 block font-bold text-[10px] uppercase">Payment TRX / Reference ID</span>
+                      <span className="font-mono font-bold text-emerald-800 text-xs">{selectedApp.paymentTxnId || selectedApp.trxId || selectedApp.transactionId || 'Pending Verification'}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Submitted Documents & Proofs Gallery */}
-                <div className="space-y-2">
-                  <span className="font-bold text-slate-800 block text-xs uppercase tracking-wide">Submitted Documents &amp; Proofs</span>
+                {/* Submitted Documents & Proofs Gallery with Preview & Download */}
+                <div className="space-y-2 pt-2 border-t border-slate-200">
+                  <span className="font-bold text-slate-800 block text-xs uppercase tracking-wide">
+                    Uploaded Documents &amp; Verification Proofs
+                  </span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     
-                    {/* CNIC Front */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block">CNIC Front</span>
-                      {selectedApp.cnicFrontUrl || (selectedApp as any).cnicFront ? (
-                        <div className="relative group rounded-lg overflow-hidden border border-slate-200 bg-slate-900 h-28 flex items-center justify-center">
-                          <img
-                            src={selectedApp.cnicFrontUrl || (selectedApp as any).cnicFront}
-                            alt="CNIC Front"
-                            className="h-full w-full object-cover cursor-pointer group-hover:opacity-80 transition-opacity"
-                            onClick={() => setZoomImage(selectedApp.cnicFrontUrl || (selectedApp as any).cnicFront)}
-                          />
+                    {/* Helper Renderer for Uploaded Documents */}
+                    {[
+                      { title: 'CNIC Front', url: selectedApp.cnicFrontUrl || (selectedApp as any).cnicFront, filename: `CNIC_Front_${selectedApp.cnic || 'doc'}.jpg` },
+                      { title: 'CNIC Back', url: selectedApp.cnicBackUrl || (selectedApp as any).cnicBack, filename: `CNIC_Back_${selectedApp.cnic || 'doc'}.jpg` },
+                      { title: 'Applicant Photo', url: selectedApp.applicantPhotoUrl || (selectedApp as any).applicantPhoto || (selectedApp as any).photoUrl, filename: `Photo_${selectedApp.cnic || 'doc'}.jpg` },
+                      { title: 'Fee Payment Proof', url: selectedApp.paymentScreenshotUrl || selectedApp.paymentScreenshot, filename: `FeeProof_${selectedApp.rollNumber || selectedApp.referenceNo || 'doc'}.jpg` },
+                    ].map((doc, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-600 uppercase truncate">{doc.title}</span>
+                          {doc.url && (
+                            <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded shrink-0">Available</span>
+                          )}
                         </div>
-                      ) : (
-                        <div className="h-28 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-medium">No Image</div>
-                      )}
-                    </div>
-
-                    {/* CNIC Back */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block">CNIC Back</span>
-                      {selectedApp.cnicBackUrl || (selectedApp as any).cnicBack ? (
-                        <div className="relative group rounded-lg overflow-hidden border border-slate-200 bg-slate-900 h-28 flex items-center justify-center">
-                          <img
-                            src={selectedApp.cnicBackUrl || (selectedApp as any).cnicBack}
-                            alt="CNIC Back"
-                            className="h-full w-full object-cover cursor-pointer group-hover:opacity-80 transition-opacity"
-                            onClick={() => setZoomImage(selectedApp.cnicBackUrl || (selectedApp as any).cnicBack)}
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-28 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-medium">No Image</div>
-                      )}
-                    </div>
-
-                    {/* Applicant Photo */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Applicant Photo</span>
-                      {selectedApp.applicantPhotoUrl || (selectedApp as any).applicantPhoto || (selectedApp as any).photoUrl ? (
-                        <div className="relative group rounded-lg overflow-hidden border border-slate-200 bg-slate-900 h-28 flex items-center justify-center">
-                          <img
-                            src={selectedApp.applicantPhotoUrl || (selectedApp as any).applicantPhoto || (selectedApp as any).photoUrl}
-                            alt="Applicant Photo"
-                            className="h-full w-full object-cover cursor-pointer group-hover:opacity-80 transition-opacity"
-                            onClick={() => setZoomImage(selectedApp.applicantPhotoUrl || (selectedApp as any).applicantPhoto || (selectedApp as any).photoUrl)}
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-28 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-medium">No Photo</div>
-                      )}
-                    </div>
-
-                    {/* Payment Proof */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Fee Proof</span>
-                      {selectedApp.paymentScreenshotUrl || selectedApp.paymentScreenshot ? (
-                        <div className="relative group rounded-lg overflow-hidden border border-slate-200 bg-slate-900 h-28 flex items-center justify-center">
-                          <img
-                            src={selectedApp.paymentScreenshotUrl || selectedApp.paymentScreenshot}
-                            alt="Payment Proof"
-                            className="h-full w-full object-cover cursor-pointer group-hover:opacity-80 transition-opacity"
-                            onClick={() => setZoomImage((selectedApp.paymentScreenshotUrl || selectedApp.paymentScreenshot)!)}
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-28 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-medium">No Proof</div>
-                      )}
-                    </div>
+                        {doc.url ? (
+                          <div className="space-y-1.5">
+                            <div className="relative group rounded-lg overflow-hidden border border-slate-200 bg-slate-900 h-28 flex items-center justify-center">
+                              <img
+                                src={doc.url}
+                                alt={doc.title}
+                                className="h-full w-full object-cover cursor-pointer group-hover:opacity-80 transition-opacity"
+                                onClick={() => setZoomImage(doc.url)}
+                              />
+                            </div>
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setZoomImage(doc.url)}
+                                className="flex-1 py-1 px-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 text-[10px] font-bold rounded flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                                title="Preview Document"
+                              >
+                                <Eye className="w-3 h-3 text-blue-600 shrink-0" />
+                                <span>View</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = doc.url;
+                                  link.download = doc.filename;
+                                  link.target = '_blank';
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                }}
+                                className="flex-1 py-1 px-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-bold rounded flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                                title="Download Document File"
+                              >
+                                <Download className="w-3 h-3 text-slate-600 shrink-0" />
+                                <span>Download</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-28 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-medium border border-dashed border-slate-200">
+                            No Document
+                          </div>
+                        )}
+                      </div>
+                    ))}
 
                   </div>
                 </div>
