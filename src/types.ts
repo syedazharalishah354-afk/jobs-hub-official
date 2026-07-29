@@ -20,25 +20,38 @@ export interface Application {
   id: string;
   userId?: string | null;
   referenceNo: string;
+  rollNumber?: string;
   fullName: string;
+  candidateName?: string;
   fatherName: string;
   cnic: string;
+  dob?: string | null;
+  gender?: string | null;
   email: string;
   mobile: string;
+  mobileNumber?: string;
+  whatsapp?: string | null;
   qualification: string;
   address: string;
+  city?: string | null;
+  province?: string | null;
   postalCode: string;
   jobPosition: string;
+  jobTitle?: string;
+  jobCategory?: string | null;
   jobId?: string | null;
   cnicFrontUrl: string;
   cnicBackUrl: string;
   applicantPhotoUrl?: string | null;
   paymentScreenshotUrl: string | null;
+  paymentScreenshot?: string | null;
   paymentMethod: 'JazzCash' | 'Easypaisa' | null;
   paymentTxnId?: string | null;
+  trxId?: string | null;
   status: ApplicationStatus;
   rejectionReason: string | null;
   createdAt: string;
+  appliedAt?: string;
   updatedAt: string;
 }
 

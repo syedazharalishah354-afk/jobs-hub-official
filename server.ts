@@ -317,12 +317,18 @@ app.post('/api/applications/step1', (req: Request, res: Response) => {
     fullName,
     fatherName,
     cnic,
+    dob,
+    gender,
     email,
     mobile,
+    whatsapp,
     qualification,
     address,
+    city,
+    province,
     postalCode,
     jobPosition,
+    jobCategory,
     cnicFrontUrl,
     cnicBackUrl,
     applicantPhotoUrl
@@ -392,12 +398,18 @@ app.post('/api/applications/step1', (req: Request, res: Response) => {
     // Update existing incomplete or pending application
     existing.fullName = fullName.trim();
     existing.fatherName = fatherName.trim();
+    existing.dob = dob || existing.dob || '';
+    existing.gender = gender || existing.gender || 'Male';
     existing.email = email.trim();
     existing.mobile = mobile.trim();
+    existing.whatsapp = whatsapp ? whatsapp.trim() : mobile.trim();
     existing.qualification = qualification.trim();
     existing.address = address.trim();
+    existing.city = city ? city.trim() : (existing.city || '');
+    existing.province = province ? province.trim() : (existing.province || 'Punjab');
     existing.postalCode = postalCode.trim();
     existing.jobPosition = jobPosition || existing.jobPosition || 'General Application';
+    existing.jobCategory = jobCategory || existing.jobCategory || 'General';
     existing.cnicFrontUrl = cnicFrontUrl;
     existing.cnicBackUrl = cnicBackUrl;
     if (applicantPhotoUrl) existing.applicantPhotoUrl = applicantPhotoUrl;
@@ -417,12 +429,18 @@ app.post('/api/applications/step1', (req: Request, res: Response) => {
       fullName: fullName.trim(),
       fatherName: fatherName.trim(),
       cnic: formattedCNIC,
+      dob: dob || '',
+      gender: gender || 'Male',
       email: email.trim(),
       mobile: mobile.trim(),
+      whatsapp: whatsapp ? whatsapp.trim() : mobile.trim(),
       qualification: qualification.trim(),
       address: address.trim(),
+      city: city ? city.trim() : '',
+      province: province ? province.trim() : 'Punjab',
       postalCode: postalCode.trim(),
       jobPosition: jobPosition || 'General Application',
+      jobCategory: jobCategory || 'General',
       cnicFrontUrl,
       cnicBackUrl,
       applicantPhotoUrl: applicantPhotoUrl || null,
@@ -432,7 +450,12 @@ app.post('/api/applications/step1', (req: Request, res: Response) => {
       status: 'Payment Pending',
       rejectionReason: null,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      candidateName: fullName.trim(),
+      mobileNumber: mobile.trim(),
+      jobTitle: jobPosition || 'General Application',
+      rollNumber: referenceNo,
+      appliedAt: now
     };
     db.applications.push(applicationRecord);
   }

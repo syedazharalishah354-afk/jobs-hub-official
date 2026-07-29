@@ -2,10 +2,64 @@ import { Application, SystemSettings, JobPosition, ApplicationStats } from '../t
 import { DEFAULT_JOBS, DEFAULT_SETTINGS } from '../constants/defaultData.js';
 import { JOB_CAMPAIGNS } from '../constants/campaigns.js';
 
+export function normalizeApplication(a: any): Application {
+  if (!a) return a;
+  const fullName = a.fullName || a.candidateName || '';
+  const fatherName = a.fatherName || '';
+  const mobile = a.mobile || a.mobileNumber || '';
+  const jobPosition = a.jobPosition || a.jobTitle || 'General Application';
+  const referenceNo = a.referenceNo || a.rollNumber || a.id || '';
+  const paymentScreenshotUrl = a.paymentScreenshotUrl || a.paymentScreenshot || null;
+  const paymentTxnId = a.paymentTxnId || a.trxId || null;
+  const createdAt = a.createdAt || a.appliedAt || new Date().toISOString();
+  const cnicFrontUrl = a.cnicFrontUrl || a.cnicFront || '';
+  const cnicBackUrl = a.cnicBackUrl || a.cnicBack || '';
+  const applicantPhotoUrl = a.applicantPhotoUrl || a.applicantPhoto || a.photoUrl || null;
+
+  return {
+    ...a,
+    id: a.id || `app-${Date.now()}`,
+    referenceNo,
+    rollNumber: referenceNo,
+    fullName,
+    candidateName: fullName,
+    fatherName,
+    cnic: a.cnic || '',
+    dob: a.dob || a.dateOfBirth || '',
+    gender: a.gender || 'Male',
+    email: a.email || '',
+    mobile,
+    mobileNumber: mobile,
+    whatsapp: a.whatsapp || mobile,
+    qualification: a.qualification || '',
+    address: a.address || '',
+    city: a.city || '',
+    province: a.province || '',
+    postalCode: a.postalCode || '',
+    jobPosition,
+    jobTitle: jobPosition,
+    jobCategory: a.jobCategory || a.category || a.department || 'General',
+    cnicFrontUrl,
+    cnicBackUrl,
+    applicantPhotoUrl,
+    paymentScreenshotUrl,
+    paymentScreenshot: paymentScreenshotUrl,
+    paymentMethod: a.paymentMethod || null,
+    paymentTxnId,
+    trxId: paymentTxnId,
+    status: a.status || 'Payment Pending',
+    rejectionReason: a.rejectionReason || null,
+    createdAt,
+    appliedAt: createdAt,
+    updatedAt: a.updatedAt || new Date().toISOString()
+  };
+}
+
 function getLocalApplications(): Application[] {
   try {
     const raw = localStorage.getItem('jobshub_local_applications');
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeApplication) : [];
   } catch {
     return [];
   }
@@ -13,8 +67,9 @@ function getLocalApplications(): Application[] {
 
 function saveLocalApplication(app: Application) {
   try {
+    const normalized = normalizeApplication(app);
     const existing = getLocalApplications();
-    const updated = [app, ...existing.filter(a => a.id !== app.id)];
+    const updated = [normalized, ...existing.filter(a => a.id !== normalized.id)];
     localStorage.setItem('jobshub_local_applications', JSON.stringify(updated));
   } catch (e) {
     console.error('Failed to save application to localStorage', e);
@@ -126,12 +181,18 @@ export async function submitApplicationStep1(payload: {
   fullName: string;
   fatherName: string;
   cnic: string;
+  dob?: string;
+  gender?: string;
   email: string;
   mobile: string;
+  whatsapp?: string;
   qualification: string;
   address: string;
+  city?: string;
+  province?: string;
   postalCode: string;
   jobPosition: string;
+  jobCategory?: string;
   cnicFrontUrl: string;
   cnicBackUrl: string;
   applicantPhotoUrl?: string;
@@ -148,8 +209,9 @@ export async function submitApplicationStep1(payload: {
       if (contentType.includes('application/json')) {
         const data = await res.json();
         if (data && data.application) {
-          saveLocalApplication(data.application);
-          return data;
+          const normalized = normalizeApplication(data.application);
+          saveLocalApplication(normalized);
+          return { ...data, application: normalized };
         }
       }
     }
@@ -159,18 +221,24 @@ export async function submitApplicationStep1(payload: {
 
   const refNum = `JH-2026-${Math.floor(10000 + Math.random() * 90000)}`;
   const now = new Date().toISOString();
-  const localApp: Application = {
+  const rawApp: any = {
     id: `app-${Date.now()}`,
     referenceNo: refNum,
     fullName: payload.fullName,
     fatherName: payload.fatherName,
     cnic: payload.cnic,
+    dob: payload.dob || '',
+    gender: payload.gender || 'Male',
     email: payload.email,
     mobile: payload.mobile,
+    whatsapp: payload.whatsapp || payload.mobile,
     qualification: payload.qualification,
     address: payload.address,
+    city: payload.city || '',
+    province: payload.province || '',
     postalCode: payload.postalCode,
     jobPosition: payload.jobPosition,
+    jobCategory: payload.jobCategory || 'General',
     cnicFrontUrl: payload.cnicFrontUrl,
     cnicBackUrl: payload.cnicBackUrl,
     applicantPhotoUrl: payload.applicantPhotoUrl || null,
@@ -183,9 +251,11 @@ export async function submitApplicationStep1(payload: {
     updatedAt: now
   };
 
+  const localApp = normalizeApplication(rawApp);
   saveLocalApplication(localApp);
+
   return {
-    message: 'Application submitted successfully',
+    message: 'Application details saved successfully',
     application: localApp
   };
 }
@@ -474,7 +544,7 @@ export async function fetchAdminApplications(
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
-        return data;
+        return data.map(normalizeApplication);
       }
     }
   } catch {
@@ -489,12 +559,13 @@ export async function fetchAdminApplications(
     const s = search.toLowerCase().trim();
     localApps = localApps.filter(a =>
       (a.fullName && a.fullName.toLowerCase().includes(s)) ||
+      (a.candidateName && a.candidateName.toLowerCase().includes(s)) ||
       (a.cnic && a.cnic.toLowerCase().includes(s)) ||
       (a.referenceNo && a.referenceNo.toLowerCase().includes(s)) ||
       (a.jobPosition && a.jobPosition.toLowerCase().includes(s))
     );
   }
-  return localApps;
+  return localApps.map(normalizeApplication);
 }
 
 export async function verifyApplicationPayment(

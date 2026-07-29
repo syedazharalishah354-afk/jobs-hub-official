@@ -51,9 +51,14 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
   const [fullName, setFullName] = useState(currentUser?.fullName || '');
   const [fatherName, setFatherName] = useState('');
   const [cnic, setCnic] = useState(currentUser?.cnic || '');
+  const [dob, setDob] = useState('1998-01-01');
+  const [gender, setGender] = useState('Male');
   const [email, setEmail] = useState(currentUser?.email || '');
   const [mobile, setMobile] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [province, setProvince] = useState('Punjab');
   const [postalCode, setPostalCode] = useState('');
 
   // Files for Step 1
@@ -240,16 +245,25 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
         applicantPhotoUrl = await uploadImageFile(applicantPhotoFile);
       }
 
+      const selectedJobObj = availableJobsList.find(j => j.title === jobPosition);
+      const jobCategory = selectedJobObj?.category || selectedJobObj?.department || 'General';
+
       const res = await submitApplicationStep1({
         fullName,
         fatherName,
         cnic,
+        dob,
+        gender,
         email,
         mobile,
+        whatsapp: whatsapp || mobile,
         qualification,
         address,
+        city: city || 'Islamabad',
+        province,
         postalCode,
         jobPosition,
+        jobCategory,
         cnicFrontUrl,
         cnicBackUrl,
         applicantPhotoUrl
@@ -590,6 +604,31 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                       {formErrors.cnic && <p className="text-[11px] text-rose-600">{formErrors.cnic}</p>}
                     </div>
 
+                    {/* Date of Birth & Gender */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Date of Birth *</label>
+                      <input
+                        type="date"
+                        required
+                        value={dob}
+                        onChange={(e) => setDob(e.target.value)}
+                        className="w-full px-4 py-2 rounded border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Gender *</label>
+                      <select
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        className="w-full px-4 py-2 rounded border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
                     {/* Email */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Email Address *</label>
@@ -622,6 +661,18 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                       {formErrors.mobile && <p className="text-[11px] text-rose-600">{formErrors.mobile}</p>}
                     </div>
 
+                    {/* WhatsApp */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">WhatsApp Number</label>
+                      <input
+                        type="tel"
+                        value={whatsapp}
+                        onChange={(e) => setWhatsapp(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                        placeholder="03XX-XXXXXXX (Same as mobile if blank)"
+                        className="w-full px-4 py-2 rounded border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+
                     {/* Qualification */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Highest Qualification *</label>
@@ -642,6 +693,36 @@ export const ApplicationWizard: React.FC<ApplicationWizardProps> = ({
                         <option value="BS">BS</option>
                         <option value="Master">Master</option>
                         <option value="Other Higher Qualification">Other Higher Qualification</option>
+                      </select>
+                    </div>
+
+                    {/* City & Province */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">City *</label>
+                      <input
+                        type="text"
+                        required
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="e.g. Islamabad / Lahore / Karachi"
+                        className="w-full px-4 py-2 rounded border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Province / Territory *</label>
+                      <select
+                        value={province}
+                        onChange={(e) => setProvince(e.target.value)}
+                        className="w-full px-4 py-2 rounded border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      >
+                        <option value="Punjab">Punjab</option>
+                        <option value="Sindh">Sindh</option>
+                        <option value="Khyber Pakhtunkhwa">Khyber Pakhtunkhwa (KPK)</option>
+                        <option value="Balochistan">Balochistan</option>
+                        <option value="Islamabad Capital Territory">Islamabad (ICT)</option>
+                        <option value="Gilgit-Baltistan">Gilgit-Baltistan</option>
+                        <option value="Azad Jammu & Kashmir">Azad Jammu & Kashmir (AJK)</option>
                       </select>
                     </div>
 
