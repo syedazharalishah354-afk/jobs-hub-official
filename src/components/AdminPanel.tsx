@@ -35,7 +35,6 @@ import {
   Key,
   DollarSign,
   Upload,
-  Phone,
   RefreshCw,
   AlertCircle,
   ChevronRight,
@@ -137,7 +136,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
       loadSettings();
       loadAdminJobs();
     }
-  }, [token, selectedStatusFilter, searchQuery]);
+  }, [token, selectedStatusFilter]);
 
   const loadAdminJobs = async () => {
     if (!token) return;
@@ -836,22 +835,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                             applications.map((app) => (
                               <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
                                 <td className="p-3 font-mono">
-                                  <div className="font-bold text-blue-900">{app.rollNumber || app.referenceNo || app.id?.slice(0, 8)}</div>
+                                  <div className="font-bold text-blue-900">{app.rollNumber || app.id.slice(0, 8)}</div>
                                   <div className="text-[10px] text-slate-400">
-                                    {app.createdAt || app.appliedAt ? new Date(app.createdAt || app.appliedAt!).toLocaleDateString() : 'N/A'}
+                                    {new Date(app.createdAt).toLocaleDateString()}
                                   </div>
                                 </td>
                                 <td className="p-3">
-                                  <div className="font-bold text-slate-900">{app.candidateName || app.fullName || 'N/A'}</div>
-                                  <div className="text-[10px] text-slate-500">CNIC: {app.cnic || 'N/A'}</div>
-                                  <div className="text-[10px] text-slate-500">Mobile: {app.mobileNumber || app.mobile || 'N/A'}</div>
+                                  <div className="font-bold text-slate-900">{app.candidateName}</div>
+                                  <div className="text-[10px] text-slate-500">CNIC: {app.cnic}</div>
+                                  <div className="text-[10px] text-slate-500">Mobile: {app.mobileNumber}</div>
                                 </td>
                                 <td className="p-3 font-medium text-slate-800">
-                                  {app.jobTitle || app.jobPosition || 'General Application'}
+                                  {app.jobTitle}
                                 </td>
                                 <td className="p-3">
-                                  <div className="font-bold capitalize text-slate-800">{app.paymentMethod || 'JazzCash / EasyPaisa'}</div>
-                                  <div className="text-[10px] text-slate-500">TRX: {app.transactionId || app.paymentTxnId || app.trxId || 'Pending'}</div>
+                                  <div className="font-bold capitalize text-slate-800">{app.paymentMethod}</div>
+                                  <div className="text-[10px] text-slate-500">TRX: {app.transactionId}</div>
                                 </td>
                                 <td className="p-3">
                                   {app.paymentStatus === 'approved' && (
@@ -1343,29 +1342,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, onRefre
                             className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono"
                           />
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-slate-100 space-y-4">
-                      <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-emerald-600" />
-                        Official WhatsApp Support Contact
-                      </h4>
-                      <p className="text-xs text-slate-500">Official WhatsApp support number for candidate inquiries &amp; confirmation slip contact button.</p>
-
-                      <div className="text-xs">
-                        <label className="block font-bold text-slate-700 mb-1">WhatsApp Number (e.g., 0301-8899771)</label>
-                        <input
-                          type="text"
-                          required
-                          value={settingsForm.whatsappNumber || '0301-8899771'}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            whatsappNumber: e.target.value
-                          })}
-                          placeholder="0301-8899771"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono"
-                        />
                       </div>
                     </div>
 

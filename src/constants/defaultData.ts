@@ -20,8 +20,7 @@ export const DEFAULT_SETTINGS: SystemSettings = {
     accountNumber: '0345-8899772',
     instructions: 'Open Easypaisa App or dial *786#. Select Send Money -> EasyPaisa Transfer. Enter Account Number 0345-8899772. Enter Amount 300 PKR. Complete payment and take a screenshot.'
   },
-  interviewPolicy: DEFAULT_INTERVIEW_POLICY,
-  whatsappNumber: '0301-8899771'
+  interviewPolicy: DEFAULT_INTERVIEW_POLICY
 };
 
 export const DEFAULT_JOBS: JobPosition[] = AUDITED_JOBS;

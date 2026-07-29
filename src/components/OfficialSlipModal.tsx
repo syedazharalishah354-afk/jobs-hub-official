@@ -1,22 +1,18 @@
 import React from 'react';
 import { Application } from '../types.js';
-import { getWhatsAppUrl } from '../utils/whatsapp.js';
-import { X, Printer, ShieldCheck, CheckCircle2, Building, Download, MessageCircle } from 'lucide-react';
+import { X, Printer, ShieldCheck, CheckCircle2, Building, Download } from 'lucide-react';
 
 interface OfficialSlipModalProps {
   app: Application | null;
   onClose: () => void;
-  whatsappNumber?: string;
 }
 
-export const OfficialSlipModal: React.FC<OfficialSlipModalProps> = ({ app, onClose, whatsappNumber }) => {
+export const OfficialSlipModal: React.FC<OfficialSlipModalProps> = ({ app, onClose }) => {
   if (!app) return null;
 
   const handlePrint = () => {
     window.print();
   };
-
-  const whatsappUrl = getWhatsAppUrl(whatsappNumber, app.referenceNo, app.jobPosition);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-xs p-4 overflow-y-auto">
@@ -29,16 +25,6 @@ export const OfficialSlipModal: React.FC<OfficialSlipModalProps> = ({ app, onClo
             Official Application Pass / Slip
           </span>
           <div className="flex items-center gap-2">
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-              title="Contact Support on WhatsApp"
-            >
-              <MessageCircle className="w-3.5 h-3.5 fill-emerald-600 text-white" />
-              <span>Contact on WhatsApp</span>
-            </a>
             <button
               onClick={handlePrint}
               className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer"
@@ -157,19 +143,6 @@ export const OfficialSlipModal: React.FC<OfficialSlipModalProps> = ({ app, onClo
               <li>Report at venue 30 minutes before time. Mobile phones and electronics are strictly banned.</li>
               <li>No TA/DA will be admissible. Schedule updates will be sent via SMS/Email.</li>
             </ul>
-          </div>
-
-          {/* WhatsApp Direct Support Contact Button */}
-          <div className="pt-2 print:hidden">
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <MessageCircle className="w-4 h-4 fill-emerald-600 text-white" />
-              <span>Contact Support on WhatsApp</span>
-            </a>
           </div>
 
           {/* Footer Note */}

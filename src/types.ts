@@ -66,7 +66,6 @@ export interface SystemSettings {
   jazzcash: PaymentMethodConfig;
   easypaisa: PaymentMethodConfig;
   interviewPolicy?: string;
-  whatsappNumber?: string;
 }
 
 export interface JobPosition {
